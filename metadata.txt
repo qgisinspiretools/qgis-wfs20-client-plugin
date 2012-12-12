@@ -1,0 +1,17 @@
+# This file contains metadata for your plugin. Beginning
+# with version 1.8 this is the preferred way to supply information about a
+# plugin. The current method of embedding metadata in __init__.py will
+# be supported until version 2.0
+
+# This file should be included when you package your plugin.
+
+[general]
+name=WFS 2.0 Client
+description=Client for OGC Web Feature Service 2.0.0
+category=Web
+version=0.8.2
+qgisMinimumVersion=1.7
+class_name=WfsClient
+website=http://www.weichand.de
+author=Juergen Weichand
+email=juergen@weichand.de
