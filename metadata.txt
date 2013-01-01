@@ -9,7 +9,7 @@
 name=WFS 2.0 Client
 description=Client for OGC Web Feature Service 2.0.0
 category=Web
-version=0.8.2
+version=0.8.3
 qgisMinimumVersion=1.7
 class_name=WfsClient
 website=http://www.weichand.de

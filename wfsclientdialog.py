@@ -70,8 +70,8 @@ class WfsClientDialog(QtGui.QDialog):
         self.onlineresource = ""
         self.vendorparameters = ""
 
-        self.ui.lblMessage.setText("SRS is set to EPSG: {0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationSrs().epsg())))
-        self.ui.txtSrs.setText("EPSG:{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationSrs().epsg())))
+        self.ui.lblMessage.setText("SRS is set to EPSG: {0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
+        self.ui.txtSrs.setText("EPSG:{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
 
         QtCore.QObject.connect(self.ui.cmdGetCapabilities, QtCore.SIGNAL("clicked()"), self.getCapabilities)
         QtCore.QObject.connect(self.ui.cmdListStoredQueries, QtCore.SIGNAL("clicked()"), self.listStoredQueries)
@@ -109,7 +109,7 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.txtCount.setText("50")
         self.ui.txtCount.setVisible(True)
         self.ui.lblSrs.setVisible(True)
-        self.ui.txtSrs.setText("EPSG:{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationSrs().epsg())))
+        self.ui.txtSrs.setText("EPSG:{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
         self.ui.txtSrs.setVisible(True)
         self.ui.txtFeatureTypeTitle.setVisible(False)
         self.ui.txtFeatureTypeDescription.setVisible(False)
@@ -129,8 +129,8 @@ class WfsClientDialog(QtGui.QDialog):
                 self.setup_urllib2(request, self.ui.txtUsername.text().trimmed(), self.ui.txtPassword.text().trimmed())
             else:
                 self.setup_urllib2(request, "", "")
-            QgsMessageLog.logMessage(request, "Wfs20Client")
-            response = urllib2.urlopen(request)
+            self.logMessage(request)
+            response = urllib2.urlopen(request, None, 10)
             buf = response.read()
         except urllib2.HTTPError, e:  
             QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
@@ -220,8 +220,8 @@ class WfsClientDialog(QtGui.QDialog):
                 self.setup_urllib2(request, self.ui.txtUsername.text().trimmed(), self.ui.txtPassword.text().trimmed())
             else:
                 self.setup_urllib2(request, "", "")
-            QgsMessageLog.logMessage(request, "Wfs20Client")
-            response = urllib2.urlopen(request)
+            self.logMessage(request)
+            response = urllib2.urlopen(request, None, 10)
             buf = response.read()
         except urllib2.HTTPError, e:  
             QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
@@ -284,7 +284,7 @@ class WfsClientDialog(QtGui.QDialog):
             # /FIX
                 
         query_string+=self.vendorparameters
-        QgsMessageLog.logMessage(self.onlineresource + query_string, "Wfs20Client")
+        self.logMessage(self.onlineresource + query_string)
 
         self.httpGetId = 0
         self.httpRequestAborted = False
@@ -487,6 +487,11 @@ class WfsClientDialog(QtGui.QDialog):
     # UTIL
     ############################################################################################################################
     """
+
+    def logMessage(self, message):
+        if globals().has_key('QgsMessageLog'):
+            QgsMessageLog.logMessage(message, "Wfs20Client")
+
     def save_url(self):
         self.save_tempfile("defaultwfs.txt", str(self.ui.txtUrl.text().trimmed()))
         QtGui.QMessageBox.information(self.parent.iface.mainWindow(),"Info", "Successfully saved OnlineResource!" )
@@ -566,7 +571,7 @@ class WfsClientDialog(QtGui.QDialog):
     def xsl_transform(self, url, xslfilename):
         try:
             self.setup_urllib2(url, "", "")
-            response = urllib2.urlopen(url)
+            response = urllib2.urlopen(url, None, 10)
             buf = response.read()
         except urllib2.HTTPError, e:  
             QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
@@ -763,6 +768,11 @@ class WfsClientDialog(QtGui.QDialog):
             self.ui.lblMessage.setText("")
         else: 
             self.ui.lblMessage.setText("")
-            QgsMapLayerRegistry.instance().addMapLayer(vlayer)
+            # QGIS 1.8, 1.9
+            if hasattr(QgsMapLayerRegistry.instance(), "addMapLayers"):
+                QgsMapLayerRegistry.instance().addMapLayers([vlayer])
+            # QGIS 1.7
+            else:
+                QgsMapLayerRegistry.instance().addMapLayer(vlayer)
             self.parent.iface.zoomToActiveLayer()
 
