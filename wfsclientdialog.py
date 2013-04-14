@@ -632,10 +632,12 @@ class WfsClientDialog(QtGui.QDialog):
 
     # Check for empty GetFeature result
     def is_empty_response(self, root):
-        if root.get("numberReturned") == "unknown":
-            return True
-        if root.get("numberReturned") == "0":
-            return True
+        # deegree 3.2: numberMatched="unknown" does return numberReturned="0" instead of numberReturned="unknown"
+        # https://portal.opengeospatial.org/files?artifact_id=43925
+        if not root.get("numberMatched") == "unknown": 
+            # no Features returned?
+            if root.get("numberReturned") == "0":
+                return True
         return False
         
 
