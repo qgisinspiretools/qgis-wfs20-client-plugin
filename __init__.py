@@ -20,22 +20,6 @@
  ***************************************************************************/
  This script initializes the plugin, making it known to QGIS.
 """
-def name():
-    return "WFS 2.0 Client"
-def description():
-    return "Client for OGC Web Feature Service 2.0.0"
-def category():
-    return "Web"
-def version():
-    return "Version 0.8.4"
-def icon():
-    return "icon.png"
-def qgisMinimumVersion():
-    return "1.7"
-def author():
-    return "Juergen Weichand"
-def email():
-    return "juergen@weichand.de"
 def classFactory(iface):
     # load WfsClient class from file WfsClient
     from wfsclient import WfsClient

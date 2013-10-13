@@ -117,7 +117,7 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.lblMessage.setText("")
 
         try:
-            self.onlineresource = self.ui.txtUrl.text().trimmed()
+            self.onlineresource = self.ui.txtUrl.text().strip()
             if len(self.onlineresource) == 0:
                 QtGui.QMessageBox.critical(self, "OnlineResource Error", "Not a valid OnlineResource!")
                 return
@@ -126,7 +126,7 @@ class WfsClientDialog(QtGui.QDialog):
             else: 
                 request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "?"))
             if self.ui.chkAuthentication.isChecked():
-                self.setup_urllib2(request, self.ui.txtUsername.text().trimmed(), self.ui.txtPassword.text().trimmed())
+                self.setup_urllib2(request, self.ui.txtUsername.text().strip(), self.ui.txtPassword.text().strip())
             else:
                 self.setup_urllib2(request, "", "")
             self.logMessage(request)
@@ -174,7 +174,7 @@ class WfsClientDialog(QtGui.QDialog):
                             featuretype.setAbstract(abstract.text)
                         for metadata_url in target.findall("{0}MetadataURL".format(nswfs)):
                             featuretype.setMetadataUrl(metadata_url.get("{0}href".format(nsxlink)))
-                        self.featuretypes[QtCore.QString(name.text)] = featuretype   
+                        self.featuretypes[name.text] = featuretype
                         self.querytype="adhocquery"
             else:
                 self.ui.lblMessage.setText("")        
@@ -217,7 +217,7 @@ class WfsClientDialog(QtGui.QDialog):
             else:
                 request = "{0}?service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
             if self.ui.chkAuthentication.isChecked():
-                self.setup_urllib2(request, self.ui.txtUsername.text().trimmed(), self.ui.txtPassword.text().trimmed())
+                self.setup_urllib2(request, self.ui.txtUsername.text().strip(), self.ui.txtPassword.text().strip())
             else:
                 self.setup_urllib2(request, "", "")
             self.logMessage(request)
@@ -242,12 +242,12 @@ class WfsClientDialog(QtGui.QDialog):
                     lparameter = []
                     for parameter in target.findall("{0}Parameter".format(namespace)):
                         lparameter.append(wfs20lib.StoredQueryParameter(parameter.get("name"), parameter.get("type")))                     
-                    storedquery = wfs20lib.StoredQuery(QtCore.QString(target.get("id")), lparameter)
+                    storedquery = wfs20lib.StoredQuery(target.get("id"), lparameter)
                     for title in target.findall("{0}Title".format(namespace)):
                         storedquery.setTitle(title.text)
                     for abstract in target.findall("{0}Abstract".format(namespace)):
                         storedquery.setAbstract(abstract.text)
-                    self.storedqueries[QtCore.QString(target.get("id"))] = storedquery
+                    self.storedqueries[target.get("id")] = storedquery
                     self.querytype="storedquery" #R
             else:
                 QtGui.QMessageBox.critical(self, "Error", "Not a valid DescribeStoredQueries-Response!")
@@ -262,25 +262,25 @@ class WfsClientDialog(QtGui.QDialog):
             storedquery = self.storedqueries[self.ui.cmbFeatureType.currentText()]
             lparameter = storedquery.getStoredQueryParameterList()
             for i in range(len(lparameter)):
-                if not lparameter[i].isValidValue(self.parameter_lineedits[i].text()):
+                if not lparameter[i].isValidValue(self.parameter_lineedits[i].text().strip()):
                     QtGui.QMessageBox.critical(self, "Validation Error", lparameter[i].getName() + ": Value validation failed!")
                     self.ui.lblMessage.setText("")
                     return
-                query_string+= "&{0}={1}".format(lparameter[i].getName(),self.parameter_lineedits[i].text())
+                query_string+= "&{0}={1}".format(lparameter[i].getName(),self.parameter_lineedits[i].text().strip())
         else :
             # FIX
             featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
             if len(self.bbox) < 1:                
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text(), self.ui.cmbFeatureType.currentText())
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText())
             else: 
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text(), self.ui.cmbFeatureType.currentText(), self.bbox)
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText(), self.bbox)
 
             if len(featuretype.getNamespace()) > 0 and len(featuretype.getNamespacePrefix()) > 0:
                 #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
                 query_string += "&namespaces=xmlns({0},{1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
             
-            if len(self.ui.txtCount.text()) > 0:
-                query_string+= "&count={0}".format(self.ui.txtCount.text())
+            if len(self.ui.txtCount.text().strip()) > 0:
+                query_string+= "&count={0}".format(self.ui.txtCount.text().strip())
             # /FIX
                 
         query_string+=self.vendorparameters
@@ -366,11 +366,11 @@ class WfsClientDialog(QtGui.QDialog):
         if self.ui.chkExtent.isChecked():
             canvas=self.parent.iface.mapCanvas()
             ext=canvas.extent()
-            self.ui.txtExtentWest.setText(QtCore.QString('%s'%ext.xMinimum()))                                                                                                                                                                                                                                                                                                                                                                                                  
-            self.ui.txtExtentEast.setText(QtCore.QString('%s'%ext.xMaximum()))                                                                                                                                                                                                                                                                                                                                                                                                  
-            self.ui.txtExtentNorth.setText(QtCore.QString('%s'%ext.yMaximum()))                                                                                                                                                                                                                                                                                                                                                                                                  
-            self.ui.txtExtentSouth.setText(QtCore.QString('%s'%ext.yMinimum()))
-            self.bbox=QtCore.QString('%s'%ext.xMinimum()) + "," + QtCore.QString('%s'%ext.yMinimum()) + "," + QtCore.QString('%s'%ext.xMaximum()) + "," + QtCore.QString('%s'%ext.yMaximum()) + ",{0}".format(self.ui.txtSrs.text())
+            self.ui.txtExtentWest.setText('%s'%ext.xMinimum())
+            self.ui.txtExtentEast.setText('%s'%ext.xMaximum())
+            self.ui.txtExtentNorth.setText('%s'%ext.yMaximum())
+            self.ui.txtExtentSouth.setText('%s'%ext.yMinimum())
+            self.bbox='%s'%ext.xMinimum() + "," + '%s'%ext.yMinimum() + "," + '%s'%ext.xMaximum() + "," + '%s'%ext.yMaximum() + ",{0}".format(self.ui.txtSrs.text().strip())
         else: 
             self.ui.txtExtentWest.setText("")
             self.ui.txtExtentEast.setText("")
@@ -493,7 +493,7 @@ class WfsClientDialog(QtGui.QDialog):
             QgsMessageLog.logMessage(message, "Wfs20Client")
 
     def save_url(self):
-        self.save_tempfile("defaultwfs.txt", str(self.ui.txtUrl.text().trimmed()))
+        self.save_tempfile("defaultwfs.txt", str(self.ui.txtUrl.text().strip()))
         QtGui.QMessageBox.information(self.parent.iface.mainWindow(),"Info", "Successfully saved OnlineResource!" )
 
     def get_url(self):
@@ -526,8 +526,8 @@ class WfsClientDialog(QtGui.QDialog):
 
     # Receive Proxy from QGIS-Settings
     def getProxy(self):
-        if self.settings.value("/proxy/proxyEnabled").toString() == "true":
-           proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost").toString(), self.settings.value("/proxy/proxyPort").toString())
+        if self.settings.value("/proxy/proxyEnabled") == "true":
+           proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost"), self.settings.value("/proxy/proxyPort"))
            if proxy.startswith("http://"):
                return proxy
            else:
@@ -572,8 +572,9 @@ class WfsClientDialog(QtGui.QDialog):
         try:
             self.setup_urllib2(url, "", "")
             response = urllib2.urlopen(url, None, 10)
-            buf = response.read()
-        except urllib2.HTTPError, e:  
+            encoding=response.headers['content-type'].split('charset=')[-1]
+            xml_source = unicode(response.read(), encoding)
+        except urllib2.HTTPError, e:
             QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
         except urllib2.URLError, e:
             QtGui.QMessageBox.critical(self, "URL Error", "URL Error: {0}".format(e.reason))
@@ -581,22 +582,15 @@ class WfsClientDialog(QtGui.QDialog):
            # load xslt
            xslt_file = QtCore.QFile(xslfilename)
            xslt_file.open(QtCore.QIODevice.ReadOnly)
-           xslt = QtCore.QString(xslt_file.readAll())
+           xslt = unicode(xslt_file.readAll())
            xslt_file.close()
- 
-           # load xml
-           xml_source = QtCore.QString.fromUtf8(buf)
 
            # xslt
            qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
            qry.setFocus(xml_source)
            qry.setQuery(xslt)
 
-           array = QtCore.QByteArray()
-           buf = QtCore.QBuffer(array)
-           buf.open(QtCore.QIODevice.WriteOnly)
-           qry.evaluateTo(buf)
-           xml_target = QtCore.QString.fromUtf8(array)
+           xml_target = qry.evaluateToString()
            return xml_target
 
 
@@ -759,8 +753,8 @@ class WfsClientDialog(QtGui.QDialog):
 
     # QHttp Slot
     def authenticationRequired(self, hostName, _, authenticator):
-        authenticator.setUser(self.ui.txtUsername.text().trimmed())
-        authenticator.setPassword(self.ui.txtPassword.text().trimmed())
+        authenticator.setUser(self.ui.txtUsername.text().strip())
+        authenticator.setPassword(self.ui.txtPassword.text().strip())
 
     def load_vector_layer(self, filename, layername):
         vlayer = QgsVectorLayer(filename, layername, "ogr")    
