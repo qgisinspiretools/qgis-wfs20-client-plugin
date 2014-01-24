@@ -46,10 +46,10 @@ class FeatureType(object):
         self.__abstract = abstract
 
     def getNamespace(self):
-        return self.__namespace
+        return self.__namespace.encode('utf8')
 
     def setNamespace(self, namespace):
-        self.__namespace = namespace
+        self.__namespace = namespace.decode('utf8')
 
     def getNamespacePrefix(self):
         return self.__namespace_prefix
