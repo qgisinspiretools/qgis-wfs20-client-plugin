@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*- 
 """
 /***************************************************************************
  WfsClientDialog
@@ -83,8 +84,6 @@ class WfsClientDialog(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.cmbFeatureType, QtCore.SIGNAL("currentIndexChanged(int)"), self.update_ui)
 
 
-
-
     def init_variables(self):
         self.columnid = 0
         self.bbox = ""
@@ -106,7 +105,7 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.txtExtentSouth.setText("")
         self.ui.cmdMetadata.setVisible(True)
         self.ui.lblCount.setVisible(True)
-        self.ui.txtCount.setText("50")
+        self.ui.txtCount.setText("1000")
         self.ui.txtCount.setVisible(True)
         self.ui.lblSrs.setVisible(True)
         self.ui.txtSrs.setText("EPSG:{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
@@ -270,13 +269,16 @@ class WfsClientDialog(QtGui.QDialog):
         else :
             # FIX
             featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
+            featuretypeQuery=urllib.quote(self.ui.cmbFeatureType.currentText().encode('utf8'))
+            
             if len(self.bbox) < 1:                
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText())
-            else: 
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText(), self.bbox)
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), featuretypeQuery)
+            else:
+                self.logMessage(self.onlineresource + '?service=WFS&request=GetFeature&count=1&version=2.0.0&typenames=' + featuretypeQuery)
+                filterString='%3Cfes%3AFilter%20xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%20xmlns%3Agml%3D%22http%3A%2F%2Fwww.opengis.net%2Fgml%2F3.2%22%3E%3Cfes%3ABBOX%3E%3Cgml%3AEnvelope%20srsName%3D%22'+self.ui.txtSrs.text().strip()+'%22%3E%3Cgml%3AlowerCorner%3E'+self.bbox.split(',')[0]+'%20'+self.bbox.split(',')[1]+'%3C%2Fgml%3AlowerCorner%3E%3Cgml%3AupperCorner%3E'+self.bbox.split(',')[2]+'%20'+self.bbox.split(',')[3]+'%3C%2Fgml%3AupperCorner%3E%3C%2Fgml%3AEnvelope%3E%3C%2Ffes%3ABBOX%3E%3C%2Ffes%3AFilter%3E'
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName="+ self.ui.txtSrs.text().strip()+ "&typeNames="+featuretypeQuery+"&filter=" + filterString
 
             if len(featuretype.getNamespace()) > 0 and len(featuretype.getNamespacePrefix()) > 0:
-                #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
                 query_string += "&namespaces=xmlns({0},{1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
             
             if len(self.ui.txtCount.text().strip()) > 0:
@@ -770,5 +772,5 @@ class WfsClientDialog(QtGui.QDialog):
             # QGIS 1.7
             else:
                 QgsMapLayerRegistry.instance().addMapLayer(vlayer)
-            self.parent.iface.zoomToActiveLayer()
+            #self.parent.iface.zoomToActiveLayer()
 
