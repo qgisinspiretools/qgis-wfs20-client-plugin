@@ -30,8 +30,13 @@ class FeatureType(object):
         self.__namespace_prefix = ""
         self.__metadata_url = ""
 
+        self.__wgs84bbox_east = 0
+        self.__wgs84bbox_south = 0
+        self.__wgs84bbox_west = 0
+        self.__wgs84bbox_north = 0
+
     def getName(self):
-        return self.__name
+        return self.__name__
 
     def getTitle(self):
         return self.__title
@@ -63,6 +68,32 @@ class FeatureType(object):
     def setMetadataUrl(self, metadata_url):
         self.__metadata_url = metadata_url
 
+
+    def getWgs84BoundingBoxEast(self):        
+        return self.__wgs84bbox_east
+
+    def setWgs84BoundingBoxEast(self, east):
+        self.__wgs84bbox_east = east
+
+    def getWgs84BoundingBoxSouth(self):        
+        return self.__wgs84bbox_south
+
+    def setWgs84BoundingBoxSouth(self, south):
+        self.__wgs84bbox_south = south
+
+    def getWgs84BoundingBoxWest(self):        
+        return self.__wgs84bbox_west
+
+    def setWgs84BoundingBoxWest(self, west):
+        self.__wgs84bbox_west = west
+
+    def getWgs84BoundingBoxNorth(self):        
+        return self.__wgs84bbox_north
+
+    def setWgs84BoundingBoxNorth(self, north):
+        self.__wgs84bbox_north = north
+        
+        
 
 class StoredQuery(object):
 

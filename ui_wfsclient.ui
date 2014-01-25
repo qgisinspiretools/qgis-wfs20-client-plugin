@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>WFS 2.0 Client - Version 0.9.0 beta</string>
+   <string>WFS 2.0 Client - Version 0.9.1 beta</string>
   </property>
   <widget class="QLabel" name="lblOnlineResource">
    <property name="geometry">
@@ -178,7 +178,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>50</string>
+     <string>1000</string>
     </property>
    </widget>
    <widget class="QLabel" name="lblInfo">
@@ -410,23 +410,6 @@
      <string>SRS</string>
     </property>
    </widget>
-   <zorder>progressBar</zorder>
-   <zorder>cmdListStoredQueries</zorder>
-   <zorder>txtFeatureTypeDescription</zorder>
-   <zorder>lblMessage</zorder>
-   <zorder>cmbFeatureType</zorder>
-   <zorder>cmdGetCapabilities</zorder>
-   <zorder>txtCount</zorder>
-   <zorder>lblInfo</zorder>
-   <zorder>lblCount</zorder>
-   <zorder>cmdGetFeature</zorder>
-   <zorder>frmParameter</zorder>
-   <zorder>frmExtent</zorder>
-   <zorder>txtFeatureTypeTitle</zorder>
-   <zorder>cmdMetadata</zorder>
-   <zorder>txtSrs</zorder>
-   <zorder>lblPassword</zorder>
-   <zorder>lblSrs</zorder>
   </widget>
   <widget class="QLineEdit" name="txtUsername">
    <property name="geometry">
@@ -504,6 +487,26 @@
     <string>Save URL as default</string>
    </property>
   </widget>
+  <widget class="QLabel" name="lblWarning">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>10</y>
+     <width>271</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Warning: No SSL certificate verification!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
   <zorder>txtPassword</zorder>
   <zorder>txtUsername</zorder>
   <zorder>lblOnlineResource</zorder>
@@ -513,6 +516,7 @@
   <zorder>lblUsername</zorder>
   <zorder>lblPassword</zorder>
   <zorder>cmdSaveUrl</zorder>
+  <zorder>lblWarning</zorder>
  </widget>
  <resources/>
  <connections/>
