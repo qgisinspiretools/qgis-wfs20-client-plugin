@@ -109,7 +109,7 @@ class WfsClientDialog(QtGui.QDialog):
 		self.ui.cmdMetadata.setVisible(True)
 		self.ui.cmdExtent.setVisible(True)
 		self.ui.lblCount.setVisible(True)
-		self.ui.txtCount.setText("50")
+		self.ui.txtCount.setText("1000")
 		self.ui.txtCount.setVisible(True)
 		self.ui.lblSrs.setVisible(True)
 		self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
