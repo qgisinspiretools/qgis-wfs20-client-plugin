@@ -1,13 +1,13 @@
 """
 /***************************************************************************
  WfsClientDialog
-								 A QGIS plugin
+                                 A QGIS plugin
  WFS 2.0 Client
-							 -------------------
-		begin                : 2012-05-17
-		copyright            : (C) 2012 by Juergen Weichand
-		email                : juergen@weichand.de
-		website              : http://www.weichand.de
+                             -------------------
+        begin                : 2012-05-17
+        copyright            : (C) 2012 by Juergen Weichand
+        email                : juergen@weichand.de
+        website              : http://www.weichand.de
  ***************************************************************************/
 
 /***************************************************************************
