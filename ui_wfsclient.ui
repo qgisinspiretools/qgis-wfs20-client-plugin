@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>WFS 2.0 Client - Version 0.9.1 beta</string>
+   <string>WFS 2.0 Client - Version 0.9.2 beta</string>
   </property>
   <widget class="QLabel" name="lblOnlineResource">
    <property name="geometry">
@@ -353,7 +353,7 @@
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>481</width>
+      <width>341</width>
       <height>31</height>
      </rect>
     </property>
@@ -382,7 +382,7 @@
      <rect>
       <x>100</x>
       <y>440</y>
-      <width>131</width>
+      <width>251</width>
       <height>20</height>
      </rect>
     </property>
@@ -408,6 +408,22 @@
     </property>
     <property name="text">
      <string>SRS</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="cmdExtent">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>100</y>
+      <width>131</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show Extent</string>
     </property>
    </widget>
   </widget>
@@ -474,19 +490,6 @@
     <string>Password</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="cmdSaveUrl">
-   <property name="geometry">
-    <rect>
-     <x>350</x>
-     <y>60</y>
-     <width>151</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Save URL as default</string>
-   </property>
-  </widget>
   <widget class="QLabel" name="lblWarning">
    <property name="geometry">
     <rect>
@@ -515,7 +518,6 @@
   <zorder>frmMain</zorder>
   <zorder>lblUsername</zorder>
   <zorder>lblPassword</zorder>
-  <zorder>cmdSaveUrl</zorder>
   <zorder>lblWarning</zorder>
  </widget>
  <resources/>
