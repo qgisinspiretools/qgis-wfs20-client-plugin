@@ -79,7 +79,7 @@ class WfsClient:
             self.iface.removePluginMenu("&WFS 2.0 Client", self.aboutAction)
 
     def about(self):
-        infoString = "<table><tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.2 beta</b></td></tr><tr><td colspan=\"2\"></td></tr><tr><td>Author:</td><td>J&uuml;rgen Weichand</td></tr><tr><td>Mail:</td><td><a href=\"mailto:juergen@weichand.de\">juergen@weichand.de</a></td></tr><tr><td>Website:</td><td><a href=\"http://www.weichand.de\">http://www.weichand.de</a></td></tr></table>"
+        infoString = "<table><tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.3 beta</b></td></tr><tr><td colspan=\"2\"></td></tr><tr><td>Author:</td><td>J&uuml;rgen Weichand</td></tr><tr><td>Mail:</td><td><a href=\"mailto:juergen@weichand.de\">juergen@weichand.de</a></td></tr><tr><td>Website:</td><td><a href=\"http://www.weichand.de\">http://www.weichand.de</a></td></tr></table>"
         QMessageBox.information(self.iface.mainWindow(), "About WFS 2.0 Client", infoString)
 
     # run method that performs all the real work

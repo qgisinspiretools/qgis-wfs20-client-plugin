@@ -27,6 +27,7 @@ from ui_wfsclient import Ui_WfsClient
 from qgis.core import *
 from xml.etree import ElementTree 
 from osgeo import gdal
+from osgeo import ogr
 import urllib
 import urllib2 
 import string
@@ -35,6 +36,7 @@ import tempfile
 import os
 import os.path
 import re
+import logging
 import epsglib
 import wfs20lib
 from metadataclientdialog import MetadataClientDialog
@@ -51,6 +53,10 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.setupUi(self)
 
         self.settings = QtCore.QSettings()
+
+        logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        logfile = self.get_temppath("wfs20client.log")
+        logging.basicConfig(filename=logfile, level=logging.DEBUG, format=logformat)
 
         self.ui.frmExtent.show()
         self.ui.frmParameter.hide()
@@ -825,10 +831,19 @@ class WfsClientDialog(QtGui.QDialog):
 
     def load_vector_layer(self, filename, layername):
 
+        self.ui.lblMessage.setText("Loading GML - Please wait!")
+        logging.debug("### LOADING GML ###")
+
         # Configure OGR/GDAL GML-Driver
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
 
+        logging.debug("resolveXpathHref " + resolvexlinkhref)
+        logging.debug("attributesToFields " + attributestofields)
+
+        gdaltimeout = "5"
+        logging.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
+        gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
         if resolvexlinkhref and resolvexlinkhref == "true":
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'NONE')
         else:
@@ -840,20 +855,88 @@ class WfsClientDialog(QtGui.QDialog):
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
 
-        vlayer = QgsVectorLayer(filename, layername, "ogr")
-        vlayer.setProviderEncoding("UTF-8") #Ignore System Encoding --> TODO: Use XML-Header
-        if not vlayer.isValid():
+        # Analyse GML-File
+        ogrdriver = ogr.GetDriverByName("GML")
+        logging.debug("OGR Datasource: " + filename)
+        ogrdatasource = ogrdriver.Open(filename)
+        logging.debug("... loaded")
+
+        if ogrdatasource is None:
             QtGui.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
             self.ui.lblMessage.setText("")
+
         else:
+            # Determine the LayerCount
+            ogrlayercount = ogrdatasource.GetLayerCount()
+            logging.debug("OGR LayerCount: " + str(ogrlayercount))
+
+            hasfeatures = False
+
+
+            # Load every Layer
+            for i in range(0, ogrlayercount):
+
+                j = ogrlayercount -1 - i # Reverse Order?
+                ogrlayer = ogrdatasource.GetLayerByIndex(j)
+                ogrlayername = ogrlayer.GetName()
+                logging.debug("OGR LayerName: " + ogrlayername)
+
+                ogrgeometrytype = ogrlayer.GetGeomType()
+                logging.debug("OGR GeometryType: " + ogr.GeometryTypeToName(ogrgeometrytype))
+
+                geomtypeids = []
+
+                # Abstract Geometry
+                if ogrgeometrytype==0:
+                    logging.debug("AbstractGeometry-Strategy ...")
+                    geomtypeids = ["1", "2", "3", "100"]
+
+                # One GeometryType
+                else:
+                    logging.debug("DefaultGeometry-Strategy ...")
+                    geomtypeids = [str(ogrgeometrytype)]
+
+
+                # Create a Layer for each GeometryType
+                for geomtypeid in geomtypeids:
+
+                    qgislayername = ogrlayername # + "#" + filename
+                    uri = filename + "|layerid=" + str(j)
+
+                    if len(geomtypeids) > 1:
+                        uri += "|subset=" + self.getsubset(geomtypeid)
+
+                    logging.debug("Loading QgsVectorLayer: " + uri)
+                    vlayer = QgsVectorLayer(uri, qgislayername, "ogr")
+                    vlayer.setProviderEncoding("UTF-8") #Ignore System Encoding --> TODO: Use XML-Header
+
+                    if not vlayer.isValid():
+                        QtGui.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
+                        self.ui.lblMessage.setText("")
+                    else:
+                        featurecount = vlayer.featureCount()
+                        if featurecount > 0:
+                            hasfeatures = True
+                            QgsMapLayerRegistry.instance().addMapLayers([vlayer])
+                            logging.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
+                            self.parent.iface.mapCanvas().zoomToFullExtent()
+
+
+            if hasfeatures == False:
+                QtGui.QMessageBox.information(self, "Information", "No Features returned!")
+
             self.ui.lblMessage.setText("")
-            # QGIS 1.8, 1.9
-            if hasattr(QgsMapLayerRegistry.instance(), "addMapLayers"):
-                QgsMapLayerRegistry.instance().addMapLayers([vlayer])
-            # QGIS 1.7
-            else:
-                QgsMapLayerRegistry.instance().addMapLayer(vlayer)
-            self.parent.iface.zoomToActiveLayer()
+
+
+
+    def getsubset(self, geomcode):
+
+        if      geomcode == "1":    return "OGR_GEOMETRY='POINT' OR OGR_GEOMETRY='MultiPoint'"
+        elif    geomcode == "2":    return "OGR_GEOMETRY='LineString' OR OGR_GEOMETRY='MultiLineString'"
+        elif    geomcode == "3":    return "OGR_GEOMETRY='Polygon' OR OGR_GEOMETRY='MultiPolygon'"
+        elif    geomcode == "100":  return "OGR_GEOMETRY='None'"
+        else:                       return "OGR_GEOMETRY='Unknown'"
+
 
 
 ###
