@@ -838,19 +838,18 @@ class WfsClientDialog(QtGui.QDialog):
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
 
-        logging.debug("resolveXpathHref " + resolvexlinkhref)
-        logging.debug("attributesToFields " + attributestofields)
-
         gdaltimeout = "5"
         logging.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
         if resolvexlinkhref and resolvexlinkhref == "true":
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'NONE')
+            logging.debug("resolveXpathHref " + resolvexlinkhref)
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
 
         if attributestofields and attributestofields == "true":
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
+            logging.debug("attributesToFields " + attributestofields)
         else:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
