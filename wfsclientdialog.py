@@ -291,7 +291,8 @@ class WfsClientDialog(QtGui.QDialog):
             if len(self.bbox) < 1:
                 query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText())
             else:
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText(), self.bbox)
+                filterString='%3Cfes%3AFilter%20xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%20xmlns%3Agml%3D%22http%3A%2F%2Fwww.opengis.net%2Fgml%2F3.2%22%3E%3Cfes%3ABBOX%3E%3Cgml%3AEnvelope%20srsName%3D%22{0}%22%3E%3Cgml%3AlowerCorner%3E{1}%20{2}%3C%2Fgml%3AlowerCorner%3E%3Cgml%3AupperCorner%3E{3}%20{4}%3C%2Fgml%3AupperCorner%3E%3C%2Fgml%3AEnvelope%3E%3C%2Ffes%3ABBOX%3E%3C%2Ffes%3AFilter%3E'.format(self.ui.txtSrs.text().strip(),self.bbox.split(',')[0],self.bbox.split(',')[1],self.bbox.split(',')[2],self.bbox.split(',')[3])
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&filter={2}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText(), filterString)
 
             if len(featuretype.getNamespace()) > 0 and len(featuretype.getNamespacePrefix()) > 0:
                 #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
