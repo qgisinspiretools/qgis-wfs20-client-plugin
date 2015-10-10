@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>WFS 2.0 Client - Version 0.9.3 beta</string>
+   <string>WFS 2.0 Client - Version 0.9.5 beta</string>
   </property>
   <widget class="QLabel" name="lblOnlineResource">
    <property name="geometry">

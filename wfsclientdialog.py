@@ -305,7 +305,7 @@ class WfsClientDialog(QtGui.QDialog):
 
         resolvedepth = self.settings.value("/Wfs20Client/resolveDepth")
         if resolvedepth:
-            query_string+="&resolvedepth={0}".format(resolvedepth)
+            query_string+="&resolve=local&resolvedepth={0}".format(resolvedepth)
 
         self.logMessage(self.onlineresource + query_string)
 
@@ -586,6 +586,13 @@ class WfsClientDialog(QtGui.QDialog):
 
     # Receive Proxy from QGIS-Settings
     def getProxy(self):
+
+        excluded_urls = self.settings.value("/proxy/proxyExcludedUrls")
+        if excluded_urls:
+            for excluded_url in excluded_urls.split("|"):
+                if excluded_url in self.onlineresource:
+                    return ""
+
         if self.settings.value("/proxy/proxyEnabled") == "true":
            proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost"), self.settings.value("/proxy/proxyPort"))
            if proxy.startswith("http://"):
@@ -918,6 +925,7 @@ class WfsClientDialog(QtGui.QDialog):
                             hasfeatures = True
                             QgsMapLayerRegistry.instance().addMapLayers([vlayer])
                             logging.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
+                            #self.parent.iface.mapCanvas().zoomToFullExtent()
 
 
             if hasfeatures == False:

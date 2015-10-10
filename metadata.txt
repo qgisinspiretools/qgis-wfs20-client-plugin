@@ -7,12 +7,15 @@
 
 [general]
 name=WFS 2.0 Client
-description=Client for OGC Web Feature Service 2.0.0
+description=Client for OGC Web Feature Service 2.0
+about=Client for OGC Web Feature Service 2.0. Best used in combination with the ComplexGmlInfo Plugin (experimental).
 category=Web
-version=0.9.4
+version=0.9.5
 qgisMinimumVersion=2.4
 experimental=False
 class_name=WfsClient
 website=http://www.weichand.de
 author=Juergen Weichand
 email=juergen@weichand.de
+tracker=https://github.com/JuergenWeichand/qgis-wfs20-client-plugin/issues
+repository=https://github.com/JuergenWeichand/qgis-wfs20-client-plugin
