@@ -918,7 +918,6 @@ class WfsClientDialog(QtGui.QDialog):
                             hasfeatures = True
                             QgsMapLayerRegistry.instance().addMapLayers([vlayer])
                             logging.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
-                            self.parent.iface.mapCanvas().zoomToFullExtent()
 
 
             if hasfeatures == False:
