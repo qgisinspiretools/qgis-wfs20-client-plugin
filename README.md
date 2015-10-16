@@ -13,4 +13,4 @@ QGIS Plugin for OGC Web Feature Service 2.0.0
 
 * the plugin can be installed using the QGIS Plugin Manager
 * search for `wfs 2.0` and press `Install plugin`
-* the plugin will be available in the `web` meneu
+* the plugin will be available in the `web` menue
