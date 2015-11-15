@@ -45,7 +45,7 @@ plugin_path = os.path.abspath(os.path.dirname(__file__))
 
 class WfsClientDialog(QtGui.QDialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, url):
         QtGui.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.parent = parent
@@ -64,7 +64,11 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.cmdListStoredQueries.setVisible(False)
 
         # Load default onlineresource
-        self.ui.txtUrl.setText(self.get_url())
+        if url:
+            self.ui.txtUrl.setText(url)
+        else:
+            self.ui.txtUrl.setText(self.get_url())
+        self.ui.txtCount.setText(self.get_featurelimit())
 
         self.ui.txtUsername.setVisible(False)
         self.ui.txtPassword.setVisible(False)
@@ -93,6 +97,9 @@ class WfsClientDialog(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.txtUrl, QtCore.SIGNAL("textChanged(QString)"), self.check_url)
         self.check_url(self.ui.txtUrl.text().strip())
 
+        if url:
+            self.getCapabilities()
+
     def init_variables(self):
         self.columnid = 0
         self.bbox = ""
@@ -115,7 +122,7 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.cmdMetadata.setVisible(True)
         self.ui.cmdExtent.setVisible(True)
         self.ui.lblCount.setVisible(True)
-        self.ui.txtCount.setText("1000")
+        self.ui.txtCount.setText(self.get_featurelimit())
         self.ui.txtCount.setVisible(True)
         self.ui.lblSrs.setVisible(True)
         self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
@@ -284,7 +291,7 @@ class WfsClientDialog(QtGui.QDialog):
                     QtGui.QMessageBox.critical(self, "Validation Error", lparameter[i].getName() + ": Value validation failed!")
                     self.ui.lblMessage.setText("")
                     return
-                query_string+= "&{0}={1}".format(lparameter[i].getName(),self.parameter_lineedits[i].text().strip())
+                query_string+= "&{0}={1}".format(urllib.quote(lparameter[i].getName()),urllib.quote(self.parameter_lineedits[i].text().strip()))
         else :
             # FIX
             featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
@@ -576,6 +583,13 @@ class WfsClientDialog(QtGui.QDialog):
             return defaultwfs
         else:
             return "http://geoserv.weichand.de:8080/geoserver/wfs"
+
+    def get_featurelimit(self):
+        defaultfeaturelimit = self.settings.value("/Wfs20Client/defaultFeatureLimit")
+        if defaultfeaturelimit:
+            return defaultfeaturelimit
+        else:
+            return "1000"
 
     def get_temppath(self, filename):
         tmpdir = os.path.join(tempfile.gettempdir(),'wfs20client')

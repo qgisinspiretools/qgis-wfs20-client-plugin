@@ -40,6 +40,7 @@ class WfsClientConfigDialog(QtGui.QDialog):
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
         resolvedepth = self.settings.value("/Wfs20Client/resolveDepth")
         defaultwfs = self.settings.value("/Wfs20Client/defaultWfs")
+        defaultfeaturelimit = self.settings.value("/Wfs20Client/defaultFeatureLimit")
 
         index = self.ui.cmbResolveDepth.findText(resolvedepth)
         self.ui.cmbResolveDepth.setCurrentIndex(index)
@@ -59,6 +60,9 @@ class WfsClientConfigDialog(QtGui.QDialog):
         if defaultwfs:
             self.ui.txtUrl.setText(defaultwfs)
 
+        if defaultfeaturelimit:
+            self.ui.txtFeatureLimit.setText(defaultfeaturelimit)
+
         QtCore.QObject.connect(self.ui.cmdSaveConfig, QtCore.SIGNAL("clicked()"), self.save_config)
 
 
@@ -69,5 +73,6 @@ class WfsClientConfigDialog(QtGui.QDialog):
         self.settings.setValue("/Wfs20Client/attributesToFields", self.ui.chkAttributesToFields.isChecked())
         self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText())
         self.settings.setValue("/Wfs20Client/defaultWfs", self.ui.txtUrl.text().strip())
+        self.settings.setValue("/Wfs20Client/defaultFeatureLimit", self.ui.txtFeatureLimit.text().strip())
         QtGui.QMessageBox.information(self, "Information", "Configuration saved!")
         self.close()

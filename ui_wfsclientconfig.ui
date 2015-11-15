@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>541</width>
-    <height>297</height>
+    <height>370</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>270</y>
+     <y>340</y>
      <width>161</width>
      <height>23</height>
     </rect>
@@ -154,7 +154,7 @@
      <x>10</x>
      <y>120</y>
      <width>521</width>
-     <height>141</height>
+     <height>211</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -183,7 +183,7 @@
      <string>WFS 2.0</string>
     </property>
    </widget>
-   <widget class="QLabel" name="lblResolveDepth_2">
+   <widget class="QLabel" name="lblDefaultWfs">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -269,6 +269,39 @@
     </property>
     <property name="text">
      <string>http://geoserv.weichand.de:8080/geoserver/wfs</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lblDefaultFeatureLimit">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>140</y>
+      <width>151</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>8</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Default FeatureLimit</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="txtFeatureLimit">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>160</y>
+      <width>481</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>1000</string>
     </property>
    </widget>
   </widget>
