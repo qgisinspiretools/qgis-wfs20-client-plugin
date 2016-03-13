@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>541</width>
-    <height>370</height>
+    <height>399</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>340</y>
+     <y>370</y>
      <width>161</width>
      <height>23</height>
     </rect>
@@ -35,7 +35,7 @@
      <x>10</x>
      <y>10</y>
      <width>521</width>
-     <height>101</height>
+     <height>131</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -47,7 +47,7 @@
    <widget class="QCheckBox" name="chkAttributesToFields">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>290</x>
       <y>70</y>
       <width>21</width>
       <height>20</height>
@@ -68,7 +68,7 @@
      <rect>
       <x>20</x>
       <y>70</y>
-      <width>181</width>
+      <width>261</width>
       <height>16</height>
      </rect>
     </property>
@@ -88,7 +88,7 @@
      <rect>
       <x>20</x>
       <y>40</y>
-      <width>181</width>
+      <width>261</width>
       <height>16</height>
      </rect>
     </property>
@@ -106,7 +106,7 @@
    <widget class="QCheckBox" name="chkResolveXlinkHref">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>290</x>
       <y>40</y>
       <width>21</width>
       <height>20</height>
@@ -142,17 +142,61 @@
      <string>GML-Reader (OGR/GDAL)</string>
     </property>
    </widget>
+   <widget class="QLabel" name="lblDisableNasDetection">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>100</y>
+      <width>261</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>8</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Disable NAS detection</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="chkDisableNasDetection">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>100</y>
+      <width>21</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+   </widget>
    <zorder>lblAttributesToFields</zorder>
    <zorder>lblResolveXlinkHref</zorder>
    <zorder>lblGmlHeader</zorder>
    <zorder>chkAttributesToFields</zorder>
    <zorder>chkResolveXlinkHref</zorder>
+   <zorder>lblDisableNasDetection</zorder>
+   <zorder>chkDisableNasDetection</zorder>
   </widget>
   <widget class="QFrame" name="frmWfs">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>120</y>
+     <y>150</y>
      <width>521</width>
      <height>211</height>
     </rect>

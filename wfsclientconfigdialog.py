@@ -38,6 +38,7 @@ class WfsClientConfigDialog(QtGui.QDialog):
         #Restore UI from Settings
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
+        disablenasdetection = self.settings.value("/Wfs20Client/disableNasDetection")
         resolvedepth = self.settings.value("/Wfs20Client/resolveDepth")
         defaultwfs = self.settings.value("/Wfs20Client/defaultWfs")
         defaultfeaturelimit = self.settings.value("/Wfs20Client/defaultFeatureLimit")
@@ -57,6 +58,15 @@ class WfsClientConfigDialog(QtGui.QDialog):
             else:
                 self.ui.chkAttributesToFields.setChecked(False)
 
+        if disablenasdetection:
+            if disablenasdetection == "true":
+                self.ui.chkDisableNasDetection.setChecked(True)
+            else:
+                self.ui.chkDisableNasDetection.setChecked(False)
+        else:
+            self.ui.chkDisableNasDetection.setChecked(True)
+
+
         if defaultwfs:
             self.ui.txtUrl.setText(defaultwfs)
 
@@ -71,6 +81,7 @@ class WfsClientConfigDialog(QtGui.QDialog):
         # Save Settings
         self.settings.setValue("/Wfs20Client/resolveXpathHref", self.ui.chkResolveXlinkHref.isChecked())
         self.settings.setValue("/Wfs20Client/attributesToFields", self.ui.chkAttributesToFields.isChecked())
+        self.settings.setValue("/Wfs20Client/disableNasDetection", self.ui.chkDisableNasDetection.isChecked())
         self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText())
         self.settings.setValue("/Wfs20Client/defaultWfs", self.ui.txtUrl.text().strip())
         self.settings.setValue("/Wfs20Client/defaultFeatureLimit", self.ui.txtFeatureLimit.text().strip())

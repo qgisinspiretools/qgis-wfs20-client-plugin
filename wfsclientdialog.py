@@ -58,6 +58,8 @@ class WfsClientDialog(QtGui.QDialog):
         logfile = self.get_temppath("wfs20client.log")
         logging.basicConfig(filename=logfile, level=logging.DEBUG, format=logformat)
 
+        self.logger = logging.getLogger('WFS 2.0 Client')
+
         self.ui.frmExtent.show()
         self.ui.frmParameter.hide()
         self.ui.progressBar.setVisible(False)
@@ -853,33 +855,39 @@ class WfsClientDialog(QtGui.QDialog):
     def load_vector_layer(self, filename, layername):
 
         self.ui.lblMessage.setText("Loading GML - Please wait!")
-        logging.debug("### LOADING GML ###")
+        self.logger.debug("### LOADING GML ###")
 
         # Configure OGR/GDAL GML-Driver
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
+        disablenasdetection = self.settings.value("/Wfs20Client/disableNasDetection")
 
         gdaltimeout = "5"
-        logging.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
+        self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
         if resolvexlinkhref and resolvexlinkhref == "true":
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'NONE')
-            logging.debug("resolveXpathHref " + resolvexlinkhref)
+            self.logger.debug("resolveXpathHref " + resolvexlinkhref)
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
 
         if attributestofields and attributestofields == "true":
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
-            logging.debug("attributesToFields " + attributestofields)
+            self.logger.debug("attributesToFields " + attributestofields)
         else:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
+        nasdetectionstring = "NAS-Operationen.xsd;NAS-Operationen_optional.xsd;AAA-Fachschema.xsd"
+        if not disablenasdetection or disablenasdetection == "true":
+            nasdetectionstring = 'asdf/asdf/asdf'
+        self.logger.debug("Using 'NAS_INDICATOR': " + nasdetectionstring)
+        gdal.SetConfigOption('NAS_INDICATOR', nasdetectionstring)
 
         # Analyse GML-File
         ogrdriver = ogr.GetDriverByName("GML")
-        logging.debug("OGR Datasource: " + filename)
+        self.logger.debug("OGR Datasource: " + filename)
         ogrdatasource = ogrdriver.Open(filename)
-        logging.debug("... loaded")
+        self.logger.debug("... loaded")
 
         if ogrdatasource is None:
             QtGui.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
@@ -888,7 +896,7 @@ class WfsClientDialog(QtGui.QDialog):
         else:
             # Determine the LayerCount
             ogrlayercount = ogrdatasource.GetLayerCount()
-            logging.debug("OGR LayerCount: " + str(ogrlayercount))
+            self.logger.debug("OGR LayerCount: " + str(ogrlayercount))
 
             hasfeatures = False
 
@@ -899,21 +907,21 @@ class WfsClientDialog(QtGui.QDialog):
                 j = ogrlayercount -1 - i # Reverse Order?
                 ogrlayer = ogrdatasource.GetLayerByIndex(j)
                 ogrlayername = ogrlayer.GetName()
-                logging.debug("OGR LayerName: " + ogrlayername)
+                self.logger.debug("OGR LayerName: " + ogrlayername)
 
                 ogrgeometrytype = ogrlayer.GetGeomType()
-                logging.debug("OGR GeometryType: " + ogr.GeometryTypeToName(ogrgeometrytype))
+                self.logger.debug("OGR GeometryType: " + ogr.GeometryTypeToName(ogrgeometrytype))
 
                 geomtypeids = []
 
                 # Abstract Geometry
                 if ogrgeometrytype==0:
-                    logging.debug("AbstractGeometry-Strategy ...")
+                    self.logger.debug("AbstractGeometry-Strategy ...")
                     geomtypeids = ["1", "2", "3", "100"]
 
                 # One GeometryType
                 else:
-                    logging.debug("DefaultGeometry-Strategy ...")
+                    self.logger.debug("DefaultGeometry-Strategy ...")
                     geomtypeids = [str(ogrgeometrytype)]
 
 
@@ -926,7 +934,7 @@ class WfsClientDialog(QtGui.QDialog):
                     if len(geomtypeids) > 1:
                         uri += "|subset=" + self.getsubset(geomtypeid)
 
-                    logging.debug("Loading QgsVectorLayer: " + uri)
+                    self.logger.debug("Loading QgsVectorLayer: " + uri)
                     vlayer = QgsVectorLayer(uri, qgislayername, "ogr")
                     vlayer.setProviderEncoding("UTF-8") #Ignore System Encoding --> TODO: Use XML-Header
 
@@ -938,7 +946,7 @@ class WfsClientDialog(QtGui.QDialog):
                         if featurecount > 0:
                             hasfeatures = True
                             QgsMapLayerRegistry.instance().addMapLayers([vlayer])
-                            logging.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
+                            self.logger.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
                             #self.parent.iface.mapCanvas().zoomToFullExtent()
 
 
