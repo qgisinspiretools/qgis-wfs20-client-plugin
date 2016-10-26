@@ -297,10 +297,11 @@ class WfsClientDialog(QtGui.QDialog):
         else :
             # FIX
             featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
+            typeNames=urllib.quote(self.ui.cmbFeatureType.currentText().encode('utf8'))
             if len(self.bbox) < 1:
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText())
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), typeNames)
             else:
-                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), self.ui.cmbFeatureType.currentText(), self.bbox)
+                query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), typeNames, self.bbox)
 
             if len(featuretype.getNamespace()) > 0 and len(featuretype.getNamespacePrefix()) > 0:
                 #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
