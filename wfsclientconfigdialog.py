@@ -20,15 +20,15 @@
  ***************************************************************************/
 """
 
-from PyQt4 import QtCore, QtGui
-from ui_wfsclientconfig import Ui_WfsClientConfig
+from PyQt5 import QtCore, QtGui, QtWidgets
+from .ui_wfsclientconfig import Ui_WfsClientConfig
 from qgis.core import *
 
 
-class WfsClientConfigDialog(QtGui.QDialog):
+class WfsClientConfigDialog(QtWidgets.QDialog):
 
     def __init__(self, parent):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.ui = Ui_WfsClientConfig()
         self.ui.setupUi(self)
@@ -47,24 +47,20 @@ class WfsClientConfigDialog(QtGui.QDialog):
         self.ui.cmbResolveDepth.setCurrentIndex(index)
 
         if resolvexlinkhref:
-            if resolvexlinkhref == "true":
-                self.ui.chkResolveXlinkHref.setChecked(True)
-            else:
-                self.ui.chkResolveXlinkHref.setChecked(False)
+            self.ui.chkResolveXlinkHref.setChecked(True)
+        else:
+            self.ui.chkResolveXlinkHref.setChecked(False)
 
         if attributestofields:
-            if attributestofields == "true":
-                self.ui.chkAttributesToFields.setChecked(True)
-            else:
-                self.ui.chkAttributesToFields.setChecked(False)
+            self.ui.chkAttributesToFields.setChecked(True)
+        else:
+            self.ui.chkAttributesToFields.setChecked(False)
 
         if disablenasdetection:
-            if disablenasdetection == "true":
-                self.ui.chkDisableNasDetection.setChecked(True)
-            else:
-                self.ui.chkDisableNasDetection.setChecked(False)
-        else:
             self.ui.chkDisableNasDetection.setChecked(True)
+        else:
+            self.ui.chkDisableNasDetection.setChecked(False)
+
 
 
         if defaultwfs:
@@ -73,7 +69,7 @@ class WfsClientConfigDialog(QtGui.QDialog):
         if defaultfeaturelimit:
             self.ui.txtFeatureLimit.setText(defaultfeaturelimit)
 
-        QtCore.QObject.connect(self.ui.cmdSaveConfig, QtCore.SIGNAL("clicked()"), self.save_config)
+        self.ui.cmdSaveConfig.clicked.connect(self.save_config)
 
 
 
@@ -85,5 +81,5 @@ class WfsClientConfigDialog(QtGui.QDialog):
         self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText())
         self.settings.setValue("/Wfs20Client/defaultWfs", self.ui.txtUrl.text().strip())
         self.settings.setValue("/Wfs20Client/defaultFeatureLimit", self.ui.txtFeatureLimit.text().strip())
-        QtGui.QMessageBox.information(self, "Information", "Configuration saved!")
+        QtWidgets.QMessageBox.information(self, "Information", "Configuration saved!")
         self.close()

@@ -22,5 +22,5 @@
 """
 def classFactory(iface):
     # load WfsClient class from file WfsClient
-    from wfsclient import WfsClient
+    from .wfsclient import WfsClient
     return WfsClient(iface)

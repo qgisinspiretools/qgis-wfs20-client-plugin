@@ -20,16 +20,14 @@
  ***************************************************************************/
 """
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtNetwork import QHttp
-from PyQt4 import QtXml, QtXmlPatterns
-from ui_wfsclient import Ui_WfsClient
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtNetwork import *
+from PyQt5 import QtXml, QtXmlPatterns
 from qgis.core import *
 from xml.etree import ElementTree 
 from osgeo import gdal
 from osgeo import ogr
-import urllib
-import urllib2 
+import urllib.request as urllib2
 import string
 import random
 import tempfile
@@ -37,22 +35,26 @@ import os
 import os.path
 import re
 import logging
-import epsglib
-import wfs20lib
-from metadataclientdialog import MetadataClientDialog
+
+from .epsglib import *
+from .wfs20lib import *
+from .ui_wfsclient import Ui_WfsClient
+from .metadataclientdialog import MetadataClientDialog
 
 plugin_path = os.path.abspath(os.path.dirname(__file__))
 
-class WfsClientDialog(QtGui.QDialog):
+
+class WfsClientDialog(QtWidgets.QDialog):
 
     def __init__(self, parent, url):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         # Set up the user interface from Designer.
         self.parent = parent
         self.ui = Ui_WfsClient()
         self.ui.setupUi(self)
 
         self.settings = QtCore.QSettings()
+        self.qnam = QNetworkAccessManager()
 
         logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         logfile = self.get_temppath("wfs20client.log")
@@ -85,18 +87,19 @@ class WfsClientDialog(QtGui.QDialog):
         self.onlineresource = ""
         self.vendorparameters = ""
 
-        self.ui.lblMessage.setText("SRS is set to EPSG: {0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
-        self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
+        self.ui.lblMessage.setText("SRS is set to EPSG: {0}".format(str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())))
+        self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())))
 
-        QtCore.QObject.connect(self.ui.cmdGetCapabilities, QtCore.SIGNAL("clicked()"), self.getCapabilities)
-        QtCore.QObject.connect(self.ui.cmdListStoredQueries, QtCore.SIGNAL("clicked()"), self.listStoredQueries)
-        QtCore.QObject.connect(self.ui.cmdGetFeature, QtCore.SIGNAL("clicked()"), self.getFeature)
-        QtCore.QObject.connect(self.ui.cmdMetadata, QtCore.SIGNAL("clicked()"), self.show_metadata)
-        QtCore.QObject.connect(self.ui.cmdExtent, QtCore.SIGNAL("clicked()"), self.show_extent)
-        QtCore.QObject.connect(self.ui.chkExtent, QtCore.SIGNAL("clicked()"), self.update_extent_frame)
-        QtCore.QObject.connect(self.ui.chkAuthentication, QtCore.SIGNAL("clicked()"), self.update_authentication)
-        QtCore.QObject.connect(self.ui.cmbFeatureType, QtCore.SIGNAL("currentIndexChanged(int)"), self.update_ui)
-        QtCore.QObject.connect(self.ui.txtUrl, QtCore.SIGNAL("textChanged(QString)"), self.check_url)
+        self.ui.cmdGetCapabilities.clicked.connect(self.getCapabilities)
+        self.ui.cmdListStoredQueries.clicked.connect(self.listStoredQueries)
+        self.ui.cmdGetFeature.clicked.connect(self.getFeature)
+        self.ui.cmdMetadata.clicked.connect(self.show_metadata)
+        self.ui.cmdExtent.clicked.connect(self.show_extent)
+        self.ui.chkExtent.clicked.connect(self.update_extent_frame)
+        self.ui.chkAuthentication.clicked.connect(self.update_authentication)
+        self.ui.cmbFeatureType.currentIndexChanged.connect(self.update_ui)
+        self.ui.txtUrl.textChanged.connect(self.check_url)
+
         self.check_url(self.ui.txtUrl.text().strip())
 
         if url:
@@ -112,7 +115,7 @@ class WfsClientDialog(QtGui.QDialog):
     # Process GetCapabilities-Request
     def getCapabilities(self):
         self.init_variables()
-        self.ui.cmdGetFeature.setEnabled(False);
+        self.ui.cmdGetFeature.setEnabled(False)
         self.ui.cmbFeatureType.clear()
         self.ui.frmExtent.show()
         self.ui.frmParameter.hide()
@@ -127,97 +130,37 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.txtCount.setText(self.get_featurelimit())
         self.ui.txtCount.setVisible(True)
         self.ui.lblSrs.setVisible(True)
-        self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapRenderer().destinationCrs().postgisSrid())))
+        self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())))
         self.ui.txtSrs.setVisible(True)
         self.ui.txtFeatureTypeTitle.setVisible(False)
         self.ui.txtFeatureTypeDescription.setVisible(False)
         self.ui.lblInfo.setText("FeatureTypes")
         self.ui.lblMessage.setText("")
 
-        try:
-            self.onlineresource = self.ui.txtUrl.text().strip()
-            if len(self.onlineresource) == 0:
-                QtGui.QMessageBox.critical(self, "OnlineResource Error", "Not a valid OnlineResource!")
-                return
-            if "?" in self.onlineresource:
-                request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "&"))
-            else:
-                request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "?"))
-            if self.ui.chkAuthentication.isChecked():
-                self.setup_urllib2(request, self.ui.txtUsername.text().strip(), self.ui.txtPassword.text().strip())
-            else:
-                self.setup_urllib2(request, "", "")
-            self.logMessage(request)
-            response = urllib2.urlopen(request, None, 10)
-            buf = response.read()
-        except urllib2.HTTPError, e:
-            QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
-            if e.code == 401:
-                self.ui.chkAuthentication.setChecked(True)
-                self.update_authentication()
-        except urllib2.URLError, e:
-            QtGui.QMessageBox.critical(self, "URL Error", "URL Error: {0}".format(e.reason))
+
+        self.onlineresource = self.ui.txtUrl.text().strip()
+
+        if len(self.onlineresource) == 0:
+            QtWidgets.QMessageBox.critical(self, "OnlineResource Error", "Not a valid OnlineResource!")
+            return
+
+        if "?" in self.onlineresource:
+            request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "&"))
         else:
-            # process Response
-            root = ElementTree.fromstring(buf)
-            if self.is_wfs20_capabilties(root):
-                # WFS 2.0 Namespace
-                nswfs = "{http://www.opengis.net/wfs/2.0}"
-                nsxlink = "{http://www.w3.org/1999/xlink}"
-                nsows = "{http://www.opengis.net/ows/1.1}"
-                # GetFeature OnlineResource
-                for target in root.findall("{0}OperationsMetadata/{0}Operation".format(nsows)):
-                    if target.get("name") == "GetFeature":
-                        for subtarget in target.findall("{0}DCP/{0}HTTP/{0}Get".format(nsows)):
-                            getfeatureurl = subtarget.get("{0}href".format(nsxlink))
-                            if not "?" in getfeatureurl:
-                                self.onlineresource = getfeatureurl
-                            else:
-                                self.onlineresource = getfeatureurl[:getfeatureurl.find("?")]
-                                self.vendorparameters = getfeatureurl[getfeatureurl.find("?"):].replace("?", "&")
-                for target in root.findall("{0}FeatureTypeList/{0}FeatureType".format(nswfs)):
-                    for name in target.findall("{0}Name".format(nswfs)):
-                        self.ui.cmbFeatureType.addItem(name.text,name.text)
-                        featuretype = wfs20lib.FeatureType(name.text)
-                        if ":" in name.text:
-                            nsmap = self.get_namespace_map(buf)
-                            for prefix in nsmap:
-                                if prefix == name.text[:name.text.find(":")]:
-                                    featuretype.setNamespace(nsmap[prefix])
-                                    featuretype.setNamespacePrefix(prefix)
-                                    break
-                        for title in target.findall("{0}Title".format(nswfs)):
-                            featuretype.setTitle(title.text)
-                        for abstract in target.findall("{0}Abstract".format(nswfs)):
-                            featuretype.setAbstract(abstract.text)
-                        for metadata_url in target.findall("{0}MetadataURL".format(nswfs)):
-                            featuretype.setMetadataUrl(metadata_url.get("{0}href".format(nsxlink)))
-                        for bbox in target.findall("{0}WGS84BoundingBox".format(nsows)):
-                            for lowercorner in bbox.findall("{0}LowerCorner".format(nsows)):
-                                featuretype.setWgs84BoundingBoxEast(lowercorner.text.split(' ')[0])
-                                featuretype.setWgs84BoundingBoxSouth(lowercorner.text.split(' ')[1])
-                            for uppercorner in bbox.findall("{0}UpperCorner".format(nsows)):
-                                featuretype.setWgs84BoundingBoxWest(uppercorner.text.split(' ')[0])
-                                featuretype.setWgs84BoundingBoxNorth(uppercorner.text.split(' ')[1])
-                        self.featuretypes[name.text] = featuretype
-                        self.querytype="adhocquery"
-            else:
-                self.ui.lblMessage.setText("")
-            self.update_ui()
+            request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "?"))
 
-            # Lock
-            self.ui.cmdGetCapabilities.setText("List FeatureTypes")
-            self.ui.cmdListStoredQueries.setVisible(True)
-            self.ui.chkAuthentication.setEnabled(False)
-            self.ui.txtUrl.setEnabled(False)
-            self.ui.txtUsername.setEnabled(False)
-            self.ui.txtPassword.setEnabled(False)
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
+        self.reply = None
+        self.httpGetId = 0
+        self.url = QtCore.QUrl(request)
 
+        self.startCapabilitiesRequest(self.url)
 
     #Process ListStoredQueries-Request
     def listStoredQueries(self):
         self.init_variables()
-        self.ui.cmdGetFeature.setEnabled(False);
+        self.ui.cmdGetFeature.setEnabled(False)
         self.ui.cmbFeatureType.clear()
         self.ui.frmExtent.hide()
         self.ui.frmParameter.show()
@@ -233,53 +176,213 @@ class WfsClientDialog(QtGui.QDialog):
         self.ui.txtFeatureTypeDescription.setVisible(False)
         self.ui.lblInfo.setText("StoredQueries")
         self.ui.lblMessage.setText("")
-        try:
-            # self.onlineresource = self.ui.txtUrl.text().trimmed()
-            if not self.onlineresource:
-                QtGui.QMessageBox.critical(self, "OnlineResource Error", "Not a valid OnlineResource!")
-                return
-            if "?" in self.onlineresource:
-                request = "{0}&service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
-            else:
-                request = "{0}?service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
-            request += self.vendorparameters
-            if self.ui.chkAuthentication.isChecked():
-                self.setup_urllib2(request, self.ui.txtUsername.text().strip(), self.ui.txtPassword.text().strip())
-            else:
-                self.setup_urllib2(request, "", "")
-            self.logMessage(request)
-            response = urllib2.urlopen(request, None, 10)
-            buf = response.read()
-        except urllib2.HTTPError, e:
-            QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
-            if e.code == 401:
-                self.ui.chkAuthentication.setChecked(True)
-                self.update_authentication()
-        except urllib2.URLError, e:
-            QtGui.QMessageBox.critical(self, "URL Error", "URL Error: {0}".format(e.reason))
-        else:
-            # process Response
-            root = ElementTree.fromstring(buf)
-            # WFS 2.0 Namespace
-            namespace = "{http://www.opengis.net/wfs/2.0}"
-            # check correct Rootelement
-            if root.tag == "{0}DescribeStoredQueriesResponse".format(namespace):
-                for target in root.findall("{0}StoredQueryDescription".format(namespace)):
-                    self.ui.cmbFeatureType.addItem(target.get("id"),target.get("id"))
-                    lparameter = []
-                    for parameter in target.findall("{0}Parameter".format(namespace)):
-                        lparameter.append(wfs20lib.StoredQueryParameter(parameter.get("name"), parameter.get("type")))
-                    storedquery = wfs20lib.StoredQuery(target.get("id"), lparameter)
-                    for title in target.findall("{0}Title".format(namespace)):
-                        storedquery.setTitle(title.text)
-                    for abstract in target.findall("{0}Abstract".format(namespace)):
-                        storedquery.setAbstract(abstract.text)
-                    self.storedqueries[target.get("id")] = storedquery
-                    self.querytype="storedquery" #R
-            else:
-                QtGui.QMessageBox.critical(self, "Error", "Not a valid DescribeStoredQueries-Response!")
-            self.update_ui()
 
+        # self.onlineresource = self.ui.txtUrl.text().trimmed()
+        if not self.onlineresource:
+            QtWidgets.QMessageBox.critical(self, "OnlineResource Error", "Not a valid OnlineResource!")
+            return
+        if "?" in self.onlineresource:
+            request = "{0}&service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
+        else:
+            request = "{0}?service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
+        request += self.vendorparameters
+
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
+        self.reply = None
+        self.httpGetId = 0
+        self.url = QtCore.QUrl(request)
+
+        self.startListStoredQueriesRequest(self.url)
+
+    def startMetadataRequest(self, url):
+        self.logMessage('Requesting metadata from '.format(url.url()))
+        self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.finished.connect(self.MetadataRequestFinished)
+
+    def startCapabilitiesRequest(self, url):
+        self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.finished.connect(self.capabilitiesRequestFinished)
+        self.reply.error.connect(self.errorOcurred)
+
+    def startListStoredQueriesRequest(self, url):
+        self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.finished.connect(self.storedQueriesRequestFinished)
+
+    def MetadataRequestFinished(self):
+        response = self.reply
+        xslfilename = os.path.join(plugin_path, "iso19139jw.xsl")
+
+        response_content = response.readAll()
+        encoding = 'UTF-8'
+        length = len(response_content)
+        for header in response.rawHeaderPairs():
+            self.logMessage('Testing header: {0}'.format(header[0]))
+            if header[0].toLower() == 'content-type':
+                self.logMessage('Found Content-Type header: {0}'.format(header[1]))
+                charset_index = header[1].indexOf('charset=')
+                if charset_index > -1:
+                    encoding = header[1][charset_index + 8:]
+                    self.logMessage('Got encoding from header: {0}'.format(encoding))
+            if header[0].toLower() == 'content-length':
+                self.logMessage('Found Content-Length header: {0}'.format(header[1]))
+                length = int(header[1])
+        self.logMessage('Content-Type: {0}'.format(response.rawHeader('Content-Type')))
+
+        self.logMessage('Using encoding {0} for metadata'.format(encoding))
+        self.logMessage('Using content-length {0} for metadata'.format(length))
+
+        xml_source = str(response_content, encoding)
+
+        print(xml_source)
+
+        # load xslt
+        xslt_file = QtCore.QFile(xslfilename)
+        xslt_file.open(QtCore.QIODevice.ReadOnly)
+        xslt = str(xslt_file.readAll())
+        xslt_file.close()
+
+        # xslt
+        qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
+        qry.setFocus(xml_source)
+        qry.setQuery(xslt)
+
+        html = qry.evaluateToString()
+        print(html)
+
+        if html:
+            # create and show the dialog
+            dlg = MetadataClientDialog()
+            dlg.ui.wvMetadata.setHtml(html)
+            # show the dialog
+            dlg.show()
+            result = dlg.exec_()
+            # See if OK was pressed
+            if result == 1:
+                # do something useful (delete the line containing pass and
+                # substitute with your code
+                pass
+        else:
+            QtWidgets.QMessageBox.critical(self, "Metadata Error", "Unable to read the Metadata")
+
+
+    def capabilitiesRequestFinished(self):
+
+        redirectionTarget = self.reply.attribute(QNetworkRequest.RedirectionTargetAttribute)
+
+        if redirectionTarget is not None:
+            newUrl = self.url.resolved(redirectionTarget)
+
+            ret = QtWidgets.QMessageBox.question(
+                self,
+                "HTTP",
+                "Weiterleiten nach: \n\n %s \n \n Passwörter werden dabei ebenfalls weitergeleitet!" % newUrl.toString(),
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+
+            if ret == QtWidgets.QMessageBox.Yes:
+                self.url = newUrl
+                self.reply.deleteLater()
+                self.reply = None
+                self.startCapabilitiesRequest(self.url)
+                return
+
+        if self.checkForHTTPErrors():
+            return
+
+        #self.reply.
+
+        buf = self.reply.readAll().data()
+        root = ElementTree.fromstring(buf)
+        if self.is_wfs20_capabilties(root):
+            # WFS 2.0 Namespace
+            nswfs = "{http://www.opengis.net/wfs/2.0}"
+            nsxlink = "{http://www.w3.org/1999/xlink}"
+            nsows = "{http://www.opengis.net/ows/1.1}"
+            # GetFeature OnlineResource
+            for target in root.findall("{0}OperationsMetadata/{0}Operation".format(nsows)):
+                if target.get("name") == "GetFeature":
+                    for subtarget in target.findall("{0}DCP/{0}HTTP/{0}Get".format(nsows)):
+                        getfeatureurl = subtarget.get("{0}href".format(nsxlink))
+                        if not "?" in getfeatureurl:
+                            self.onlineresource = getfeatureurl
+                        else:
+                            self.onlineresource = getfeatureurl[:getfeatureurl.find("?")]
+                            self.vendorparameters = getfeatureurl[getfeatureurl.find("?"):].replace("?", "&")
+            for target in root.findall("{0}FeatureTypeList/{0}FeatureType".format(nswfs)):
+                for name in target.findall("{0}Name".format(nswfs)):
+                    self.ui.cmbFeatureType.addItem(name.text, name.text)
+                    featuretype = FeatureType(name.text)
+                    if ":" in name.text:
+                        nsmap = self.get_namespace_map(buf)
+                        for prefix in nsmap:
+                            if prefix == name.text[:name.text.find(":")]:
+                                featuretype.setNamespace(nsmap[prefix])
+                                featuretype.setNamespacePrefix(prefix)
+                                break
+                    for title in target.findall("{0}Title".format(nswfs)):
+                        featuretype.setTitle(title.text)
+                    for abstract in target.findall("{0}Abstract".format(nswfs)):
+                        featuretype.setAbstract(abstract.text)
+                    for metadata_url in target.findall("{0}MetadataURL".format(nswfs)):
+                        featuretype.setMetadataUrl(metadata_url.get("{0}href".format(nsxlink)))
+                    for bbox in target.findall("{0}WGS84BoundingBox".format(nsows)):
+                        for lowercorner in bbox.findall("{0}LowerCorner".format(nsows)):
+                            featuretype.setWgs84BoundingBoxEast(lowercorner.text.split(' ')[0])
+                            featuretype.setWgs84BoundingBoxSouth(lowercorner.text.split(' ')[1])
+                        for uppercorner in bbox.findall("{0}UpperCorner".format(nsows)):
+                            featuretype.setWgs84BoundingBoxWest(uppercorner.text.split(' ')[0])
+                            featuretype.setWgs84BoundingBoxNorth(uppercorner.text.split(' ')[1])
+                    self.featuretypes[name.text] = featuretype
+                    self.querytype = "adhocquery"
+        else:
+            self.ui.lblMessage.setText("")
+
+        self.update_ui()
+
+        # Lock
+        self.ui.cmdGetCapabilities.setText("List FeatureTypes")
+        self.ui.cmdListStoredQueries.setVisible(True)
+        self.ui.chkAuthentication.setEnabled(False)
+        self.ui.txtUrl.setEnabled(False)
+        self.ui.txtUsername.setEnabled(False)
+        self.ui.txtPassword.setEnabled(False)
+
+    def storedQueriesRequestFinished(self):
+
+        if self.checkForHTTPErrors():
+            return
+
+        buf = self.reply.readAll().data()
+        root = ElementTree.fromstring(buf)
+        # WFS 2.0 Namespace
+        namespace = "{http://www.opengis.net/wfs/2.0}"
+        # check correct Rootelement
+        if root.tag == "{0}DescribeStoredQueriesResponse".format(namespace):
+            for target in root.findall("{0}StoredQueryDescription".format(namespace)):
+                self.ui.cmbFeatureType.addItem(target.get("id"),target.get("id"))
+                lparameter = []
+                for parameter in target.findall("{0}Parameter".format(namespace)):
+                    lparameter.append(StoredQueryParameter(parameter.get("name"), parameter.get("type")))
+                storedquery = StoredQuery(target.get("id"), lparameter)
+                for title in target.findall("{0}Title".format(namespace)):
+                    storedquery.setTitle(title.text)
+                for abstract in target.findall("{0}Abstract".format(namespace)):
+                    storedquery.setAbstract(abstract.text)
+                self.storedqueries[target.get("id")] = storedquery
+                self.querytype="storedquery" #R
+        else:
+            QtWidgets.QMessageBox.critical(self, "Error", "Not a valid DescribeStoredQueries-Response!")
+        self.update_ui()
+
+    def errorOcurred(self):
+        print("Error Ocurred!")
+
+    def checkForHTTPErrors(self):
+        if self.reply.error():
+            QtWidgets.QMessageBox.information(self, "HTTP",
+                                              "Download failed: %s." % self.reply.errorString())
+            return True
 
     # Process GetFeature-Request
     def getFeature(self):
@@ -290,22 +393,22 @@ class WfsClientDialog(QtGui.QDialog):
             lparameter = storedquery.getStoredQueryParameterList()
             for i in range(len(lparameter)):
                 if not lparameter[i].isValidValue(self.parameter_lineedits[i].text().strip()):
-                    QtGui.QMessageBox.critical(self, "Validation Error", lparameter[i].getName() + ": Value validation failed!")
+                    QtWidgets.QMessageBox.critical(self, "Validation Error", lparameter[i].getName() + ": Value validation failed!")
                     self.ui.lblMessage.setText("")
                     return
-                query_string+= "&{0}={1}".format(urllib.quote(lparameter[i].getName()),urllib.quote(self.parameter_lineedits[i].text().strip()))
+                query_string+= "&{0}={1}".format(urllib2.quote(lparameter[i].getName()), urllib2.quote(self.parameter_lineedits[i].text().strip()))
         else :
             # FIX
             featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
-            typeNames=urllib.quote(self.ui.cmbFeatureType.currentText().encode('utf8'))
+            typeNames=urllib2.quote(self.ui.cmbFeatureType.currentText().encode('utf8'))
             if len(self.bbox) < 1:
                 query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}".format(self.ui.txtSrs.text().strip(), typeNames)
             else:
                 query_string = "?service=WFS&request=GetFeature&version=2.0.0&srsName={0}&typeNames={1}&bbox={2}".format(self.ui.txtSrs.text().strip(), typeNames, self.bbox)
 
             if len(featuretype.getNamespace()) > 0 and len(featuretype.getNamespacePrefix()) > 0:
-                #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
-                query_string += "&namespaces=xmlns({0},{1})".format(featuretype.getNamespacePrefix(), urllib.quote(featuretype.getNamespace(),""))
+                #query_string += "&namespace=xmlns({0}={1})".format(featuretype.getNamespacePrefix(), urllib2.quote(featuretype.getNamespace(),""))
+                query_string += "&namespaces=xmlns({0},{1})".format(featuretype.getNamespacePrefix(), urllib2.quote(featuretype.getNamespace(),""))
 
             if len(self.ui.txtCount.text().strip()) > 0:
                 query_string+= "&count={0}".format(self.ui.txtCount.text().strip())
@@ -322,12 +425,8 @@ class WfsClientDialog(QtGui.QDialog):
         self.httpGetId = 0
         self.httpRequestAborted = False
 
-        self.setup_qhttp()
-        self.http.requestFinished.connect(self.httpRequestFinished)
-        self.http.dataReadProgress.connect(self.updateDataReadProgress)
-        self.http.responseHeaderReceived.connect(self.readResponseHeader)
-        self.http.authenticationRequired.connect(self.authenticationRequired)
-        self.http.sslErrors.connect(self.sslErrors)
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
 
         layername="wfs{0}".format(''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6)))
         self.downloadFile(self.onlineresource, query_string, self.get_temppath("{0}.gml".format(layername)))
@@ -413,7 +512,7 @@ class WfsClientDialog(QtGui.QDialog):
             self.ui.txtExtentNorth.setText('%s'%ext.yMaximum())
             self.ui.txtExtentSouth.setText('%s'%ext.yMinimum())
 
-            if (epsglib.isAxisOrderLatLon(self.ui.txtSrs.text().strip())):
+            if (isAxisOrderLatLon(self.ui.txtSrs.text().strip())):
                 self.bbox='%s'%ext.yMinimum() + "," + '%s'%ext.xMinimum() + "," + '%s'%ext.yMaximum() + "," + '%s'%ext.xMaximum() + ",{0}".format(self.ui.txtSrs.text().strip())
             else:
                 self.bbox='%s'%ext.xMinimum() + "," + '%s'%ext.yMinimum() + "," + '%s'%ext.xMaximum() + "," + '%s'%ext.yMaximum() + ",{0}".format(self.ui.txtSrs.text().strip())
@@ -459,10 +558,10 @@ class WfsClientDialog(QtGui.QDialog):
 
     # GridLayout addParameter (StoredQueries)
     def layout_add_parameter(self, storedqueryparameter):
-        qlineedit = QtGui.QLineEdit()
-        qlabelname = QtGui.QLabel()
+        qlineedit = QtWidgets.QLineEdit()
+        qlabelname = QtWidgets.QLabel()
         qlabelname.setText(storedqueryparameter.getName())
-        qlabeltype = QtGui.QLabel()
+        qlabeltype = QtWidgets.QLabel()
         qlabeltype.setText(storedqueryparameter.getType().replace("xsd:", ""))
         self.ui.gridLayout.addWidget(qlabelname, self.columnid, 0)
         self.ui.gridLayout.addWidget(qlineedit, self.columnid, 1)
@@ -510,7 +609,7 @@ class WfsClientDialog(QtGui.QDialog):
             if self.querytype == "adhocquery":
                 featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
                 if featuretype.getWgs84BoundingBoxEast():
-                    if featuretype.getWgs84BoundingBoxEast() > 0:
+                    if float(featuretype.getWgs84BoundingBoxEast()) > 0.0:
                         self.ui.cmdExtent.setEnabled(True)
                     else:
                         self.ui.cmdExtent.setEnabled(False)
@@ -527,7 +626,7 @@ class WfsClientDialog(QtGui.QDialog):
 
     def create_layer(self, featuretype):
         layer = QgsVectorLayer("polygon?crs=epsg:4326&", featuretype.getName() + " (Extent)", "memory")
-        QgsMapLayerRegistry.instance().addMapLayer(layer)
+        QgsProject.instance().addMapLayer(layer)
 
         e = featuretype.getWgs84BoundingBoxEast()
         s = featuretype.getWgs84BoundingBoxSouth()
@@ -549,24 +648,15 @@ class WfsClientDialog(QtGui.QDialog):
 
     def show_metadata(self):
         featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
-        xslfilename = os.path.join(plugin_path, "iso19139jw.xsl")
+        url = featuretype.getMetadataUrl()
+        if url == '':
+            QtWidgets.QMessageBox.critical(self, "Metadata Error", "No metadata URL in FeatureType")
+            return
 
-        html = self.xsl_transform(featuretype.getMetadataUrl(), xslfilename)
-
-        if html:
-            # create and show the dialog
-            dlg = MetadataClientDialog()
-            dlg.ui.wvMetadata.setHtml(html)
-            # show the dialog
-            dlg.show()
-            result = dlg.exec_()
-            # See if OK was pressed
-            if result == 1:
-                # do something useful (delete the line containing pass and
-                # substitute with your code
-                pass
-        else:
-            QtGui.QMessageBox.critical(self, "Metadata Error", "Unable to read the Metadata")
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
+        url = QtCore.QUrl(url)
+        self.startMetadataRequest(url)
 
 
 
@@ -577,7 +667,7 @@ class WfsClientDialog(QtGui.QDialog):
     """
 
     def logMessage(self, message):
-        if globals().has_key('QgsMessageLog'):
+        if 'QgsMessageLog' in globals():
             QgsMessageLog.logMessage(message, "Wfs20Client")
 
     def get_url(self):
@@ -606,81 +696,18 @@ class WfsClientDialog(QtGui.QDialog):
 
         excluded_urls = self.settings.value("/proxy/proxyExcludedUrls")
         if excluded_urls:
-            for excluded_url in excluded_urls.split("|"):
+            for excluded_url in excluded_urls:
                 if excluded_url in self.onlineresource:
                     return ""
 
-        if self.settings.value("/proxy/proxyEnabled") == "true":
-           proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost"), self.settings.value("/proxy/proxyPort"))
-           if proxy.startswith("http://"):
-               return proxy
-           else:
-               return proxy
+        if self.settings.value("/proxy/proxyEnabled") == True:
+            proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost"), self.settings.value("/proxy/proxyPort"))
+            if proxy.startswith("http://"):
+                return proxy
+            else:
+                return proxy
         else:
             return ""
-
-    # Setup urllib2 (Proxy)
-    def setup_urllib2(self, request, username, password):
-
-        # Proxy-Handler
-        if not self.getProxy() == "":
-            if (request.startswith("https")):
-                proxy_handler = urllib2.ProxyHandler({"https" : self.getProxy()})
-            else:
-                proxy_handler = urllib2.ProxyHandler({"http" : self.getProxy()})
-        else:
-            proxy_handler = urllib2.ProxyHandler({})
-
-        # Auth-Handler
-        if username and len(username) > 0 and password and len(password) > 0:
-
-            # Auth-Handler
-            password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-            password_mgr.add_password(None, request, username, password)
-            auth_handler = HTTPBasicAuthHandlerLimitRetries(password_mgr)
-            opener = urllib2.build_opener(proxy_handler, auth_handler)
-
-        else:
-            opener = urllib2.build_opener(proxy_handler)
-
-        urllib2.install_opener(opener)
-
-
-    # Setup Qhttp (Proxy)
-    def setup_qhttp(self):
-        self.http = QHttp(self)
-        if not self.getProxy() == "":
-            self.http.setProxy(QgsNetworkAccessManager.instance().fallbackProxy()) # Proxy
-
-
-    # XSL Transformation
-    def xsl_transform(self, url, xslfilename):
-        try:
-            self.setup_urllib2(url, "", "")
-            response = urllib2.urlopen(url, None, 10)
-            encoding=response.headers['content-type'].split('charset=')[-1]
-            xml_source = unicode(response.read(), encoding)
-        except urllib2.HTTPError, e:
-            QtGui.QMessageBox.critical(self, "HTTP Error", "HTTP Error: {0}".format(e.code))
-        except urllib2.URLError, e:
-            QtGui.QMessageBox.critical(self, "URL Error", "URL Error: {0}".format(e.reason))
-        else:
-            # load xslt
-            xslt_file = QtCore.QFile(xslfilename)
-            xslt_file.open(QtCore.QIODevice.ReadOnly)
-            xslt = unicode(xslt_file.readAll())
-            xslt_file.close()
-
-            # xslt
-            qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
-            qry.setFocus(xml_source)
-            qry.setQuery(xslt)
-
-            xml_target = qry.evaluateToString()
-            return xml_target
-
-
-    # WFS 2.0 UTILS
 
     # check for OWS-Exception
     def is_exception(self, root):
@@ -689,7 +716,7 @@ class WfsClientDialog(QtGui.QDialog):
             if root.tag == "{0}ExceptionReport".format(namespace):
                 for exception in root.findall("{0}Exception".format(namespace)):
                     for exception_text in exception.findall("{0}ExceptionText".format(namespace)):
-                        QtGui.QMessageBox.critical(self, "OWS Exception", "OWS Exception returned from the WFS:<br>"+ str(exception_text.text))
+                        QtWidgets.QMessageBox.critical(self, "OWS Exception", "OWS Exception returned from the WFS:<br>"+ str(exception_text.text))
                         self.ui.lblMessage.setText("")
                 return True
         return False
@@ -702,10 +729,10 @@ class WfsClientDialog(QtGui.QDialog):
         if root.tag == "{0}WFS_Capabilities".format("{http://www.opengis.net/wfs/2.0}"):
             return True
         if root.tag == "{0}WFS_Capabilities".format("{http://www.opengis.net/wfs}"):
-            QtGui.QMessageBox.warning(self, "Wrong WFS Version", "This Plugin has dedicated support for WFS 2.0!")
+            QtWidgets.QMessageBox.warning(self, "Wrong WFS Version", "This Plugin has dedicated support for WFS 2.0!")
             self.ui.lblMessage.setText("")
             return False
-        QtGui.QMessageBox.critical(self, "Error", "Not a valid WFS GetCapabilities-Response!")
+        QtWidgets.QMessageBox.critical(self, "Error", "Not a valid WFS GetCapabilities-Response!")
         self.ui.lblMessage.setText("")
         return False
 
@@ -728,6 +755,7 @@ class WfsClientDialog(QtGui.QDialog):
 
     # Determine namespaces in the capabilities (including non-used)
     def get_namespace_map(self, xml):
+        xml = str(xml)
         nsmap = {}
         for i in [m.start() for m in re.finditer('xmlns:', xml)]:
             j = i + 6
@@ -757,29 +785,31 @@ class WfsClientDialog(QtGui.QDialog):
 
         self.outFile = QtCore.QFile(fileName)
         if not self.outFile.open(QtCore .QIODevice.WriteOnly):
-            QtGui.QMessageBox.information(self, 'Error', 'Unable to save the file %s: %s.' % (fileName, self.outFile.errorString()))
+            QtWidgets.QMessageBox.information(self, 'Error', 'Unable to save the file %s: %s.' % (fileName, self.outFile.errorString()))
             self.outFile = None
             return
 
-        port = url.port()
-        if port == -1:
-            port = 0
-
-        if onlineResource.startswith("https"):
-            self.http.setHost(url.host(), QHttp.ConnectionModeHttps, port)
-        else:
-            self.http.setHost(url.host(), QHttp.ConnectionModeHttp, port)
-
         self.httpRequestAborted = False
-        # Download the file.
         self.ui.progressBar.setVisible(True)
-        self.httpGetId = self.http.get(url.path() + queryString, self.outFile)
 
+        url.setUrl(onlineResource + queryString)
+
+        self.startRequest(url)
+
+    def startRequest(self, url):
+        self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.finished.connect(self.httpRequestFinished)
+        self.reply.readyRead.connect(self.httpReadyRead)
+        self.reply.downloadProgress.connect(self.updateDataReadProgress)
+
+    def httpReadyRead(self):
+        if self.outFile is not None:
+            self.outFile.write(self.reply.readAll())
 
     # Currently unused
     def cancelDownload(self):
         self.httpRequestAborted = True
-        self.http.abort()
+        self.qnam.abort()
         self.close()
 
         self.ui.progressBar.setMaximum(1)
@@ -787,61 +817,60 @@ class WfsClientDialog(QtGui.QDialog):
         self.unlock_ui()
 
     # QHttp Slot
-    def httpRequestFinished(self, requestId, error):
-        if requestId != self.httpGetId:
-            return
-
+    def httpRequestFinished(self):
         if self.httpRequestAborted:
             if self.outFile is not None:
                 self.outFile.close()
                 self.outFile.remove()
                 self.outFile = None
+
+            self.reply.deleteLater()
+            self.reply = None
+            self.ui.progressBar.hide()
             return
 
+        self.outFile.flush()
         self.outFile.close()
 
         self.ui.progressBar.setMaximum(1)
         self.ui.progressBar.setValue(1)
 
-        if error:
-            self.outFile.remove()
-            QtGui.QMessageBox.critical(self, "Error", "Download failed: %s." % self.http.errorString())
+        # Parse and check only small files
+        if os.path.getsize(str(self.outFile.fileName())) < 5000:
+            root = ElementTree.parse(str(self.outFile.fileName())).getroot()
+            if not self.is_exception(root):
+                if not self.is_empty_response(root):
+                    self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
+                else:
+                    QtWidgets.QMessageBox.information(self, "Information", "0 Features returned!")
+                    self.ui.lblMessage.setText("")
         else:
-            # Parse and check only small files
-            if os.path.getsize(str(self.outFile.fileName())) < 5000:
-                root = ElementTree.parse(str(self.outFile.fileName())).getroot()
-                if not self.is_exception(root):
-                    if not self.is_empty_response(root):
-                        self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
-                    else:
-                        QtGui.QMessageBox.information(self, "Information", "0 Features returned!")
-                        self.ui.lblMessage.setText("")
-            else:
-                self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
+            self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
 
         self.ui.progressBar.setMaximum(1)
         self.ui.progressBar.setValue(0)
         self.unlock_ui()
 
     # QHttp Slot
-        # Check for genuine error conditions.Gz
+    # Check for genuine error conditions.Gz
     def readResponseHeader(self, responseHeader):
         if responseHeader.statusCode() not in (200, 300, 301, 302, 303, 307):
-            QtGui.QMessageBox.critical(self, 'Error',
-                    'Download failed: %s.' % responseHeader.reasonPhrase())
+            QtWidgets.QMessageBox.critical(self, 'Error',
+                                           'Download failed: %s.' % responseHeader.reasonPhrase())
             self.ui.lblMessage.setText("")
             self.httpRequestAborted = True
-            self.http.abort()
+            self.qnam.abort()
 
     def updateDataReadProgress(self, bytesRead, totalBytes):
         if self.httpRequestAborted:
             return
+
         self.ui.progressBar.setMaximum(totalBytes)
         self.ui.progressBar.setValue(bytesRead)
         self.ui.lblMessage.setText("Please wait while downloading - {0} Bytes downloaded!".format(str(bytesRead)))
 
     # QHttp Slot
-    def authenticationRequired(self, hostName, _, authenticator):
+    def authenticationRequired(self, reply, authenticator):
         authenticator.setUser(self.ui.txtUsername.text().strip())
         authenticator.setPassword(self.ui.txtPassword.text().strip())
 
@@ -849,9 +878,9 @@ class WfsClientDialog(QtGui.QDialog):
         errorString = ""
         for error in errors:
             errorString+=error.errorString() + "\n"
-        # QtGui.QMessageBox.critical(self, "Error", errorString)
+        # QtWidgets.QMessageBox.critical(self, "Error", errorString)
 
-        self.http.ignoreSslErrors()
+        self.qnam.ignoreSslErrors()
 
     def load_vector_layer(self, filename, layername):
 
@@ -891,7 +920,7 @@ class WfsClientDialog(QtGui.QDialog):
         self.logger.debug("... loaded")
 
         if ogrdatasource is None:
-            QtGui.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
+            QtWidgets.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
             self.ui.lblMessage.setText("")
 
         else:
@@ -940,19 +969,19 @@ class WfsClientDialog(QtGui.QDialog):
                     vlayer.setProviderEncoding("UTF-8") #Ignore System Encoding --> TODO: Use XML-Header
 
                     if not vlayer.isValid():
-                        QtGui.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
+                        QtWidgets.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
                         self.ui.lblMessage.setText("")
                     else:
                         featurecount = vlayer.featureCount()
                         if featurecount > 0:
                             hasfeatures = True
-                            QgsMapLayerRegistry.instance().addMapLayers([vlayer])
+                            QgsProject.instance().addMapLayers([vlayer])
                             self.logger.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
                             #self.parent.iface.mapCanvas().zoomToFullExtent()
 
 
             if hasfeatures == False:
-                QtGui.QMessageBox.information(self, "Information", "No Features returned!")
+                QtWidgets.QMessageBox.information(self, "Information", "No Features returned!")
 
             self.ui.lblMessage.setText("")
 
@@ -965,40 +994,3 @@ class WfsClientDialog(QtGui.QDialog):
         elif    geomcode == "3":    return "OGR_GEOMETRY='Polygon' OR OGR_GEOMETRY='MultiPolygon'"
         elif    geomcode == "100":  return "OGR_GEOMETRY='None'"
         else:                       return "OGR_GEOMETRY='Unknown'"
-
-
-
-###
-#
-# Custom HTTPBasicAuthHandler with fix for infinite retries when submitting wrong password
-# http://bugs.python.org/issue8797
-# http://bugs.python.org/file20471/simpler_fix.patch
-#
-###
-
-class HTTPBasicAuthHandlerLimitRetries(urllib2.HTTPBasicAuthHandler):
-    def __init__(self, *args, **kwargs):
-        urllib2.HTTPBasicAuthHandler.__init__(self, *args, **kwargs)
-
-    def http_error_auth_reqed(self, authreq, host, req, headers):
-        authreq = headers.get(authreq, None)
-        if authreq:
-            mo = urllib2.AbstractBasicAuthHandler.rx.search(authreq)
-            if mo:
-                if len(mo.groups()) == 3:
-                    scheme, quote, realm = mo.groups()
-                else:
-                    scheme, realm = mo.groups()
-                if scheme.lower() == 'basic':
-                    return self.retry_http_basic_auth(host, req, realm)
-
-    def retry_http_basic_auth(self, host, req, realm):
-        user, pw = self.passwd.find_user_password(realm, host)
-        if pw is not None:
-            raw = "%s:%s" % (user, pw)
-            auth = 'Basic %s' % urllib2.base64.b64encode(raw).strip()
-            if req.get_header(self.auth_header, None) == auth:
-                return None
-            req.add_unredirected_header(self.auth_header, auth)
-            #return self.parent.open(req, timeout=req.timeout)
-            return self.parent.open(req)

@@ -20,14 +20,15 @@
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from qgis.core import *
 # Initialize Qt resources from file resources.py
-import resources
+from .resources import *
 # Import the code for the dialog
-from wfsclientdialog import WfsClientDialog
-from wfsclientconfigdialog import WfsClientConfigDialog
+from .wfsclientdialog import WfsClientDialog
+from .wfsclientconfigdialog import WfsClientConfigDialog
 
 
 class WfsClient:
@@ -41,17 +42,17 @@ class WfsClient:
         self.clientAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "WFS 2.0 Client", self.iface.mainWindow())
         # connect the action to the run method
-        QObject.connect(self.clientAction, SIGNAL("triggered()"), self.runClient)
+        self.clientAction.triggered.connect(self.runClient)
 
         self.configAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "Config", self.iface.mainWindow())
         # connect the action to the run method
-        QObject.connect(self.configAction, SIGNAL("triggered()"), self.runConfig)
+        self.configAction.triggered.connect(self.runConfig)
 
 
         self.aboutAction=QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "About", self.iface.mainWindow())
-        QObject.connect(self.aboutAction, SIGNAL("activated()"), self.about)
+        self.aboutAction.triggered.connect(self.about)
 
         # Add toolbar button and menu item
         if hasattr( self.iface, "addPluginToWebMenu" ):

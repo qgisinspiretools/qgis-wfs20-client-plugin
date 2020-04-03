@@ -51,10 +51,10 @@ class FeatureType(object):
         self.__abstract = abstract
 
     def getNamespace(self):
-        return self.__namespace.encode('utf8')
+        return self.__namespace #.encode('utf8')
 
     def setNamespace(self, namespace):
-        self.__namespace = namespace.decode('utf8')
+        self.__namespace = namespace #.decode('utf8')
 
     def getNamespacePrefix(self):
         return self.__namespace_prefix
@@ -140,7 +140,7 @@ class StoredQueryParameter(object):
         # simple integer check
         if self.__type == "xsd:int" or self.__type == "xsd:integer"  or self.__type == "xsd:long":
             try:
-                long(str(value))
+                int(str(value))
                 return True
             except ValueError:
                 return False
