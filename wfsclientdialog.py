@@ -666,9 +666,9 @@ class WfsClientDialog(QtWidgets.QDialog):
     ############################################################################################################################
     """
 
-    def logMessage(self, message):
+    def logMessage(self, message, level=Qgis.Info):
         if 'QgsMessageLog' in globals():
-            QgsMessageLog.logMessage(message, "Wfs20Client")
+            QgsMessageLog.logMessage(message, "Wfs20Client", level)
 
     def get_url(self):
         defaultwfs = self.settings.value("/Wfs20Client/defaultWfs")
