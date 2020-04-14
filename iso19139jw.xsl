@@ -7,7 +7,7 @@
  ISO 19139 Metadata to HTML XSL-Transformation
                              - - - - - - - - 
         begin                : 2012-08-14
-        update               : 2012-10-27
+        update               : 2020-04-14
         copyright            : (c) 2012 by Juergen Weichand
         email                : juergen@weichand.de
         web                  : weichand.de
@@ -24,7 +24,7 @@
 """
 -->
 <xsl:stylesheet 
-    version="1.0" 
+    version="2.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"    
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:csw="http://www.opengis.net/cat/csw/2.0.2"
@@ -32,29 +32,32 @@
     xmlns:gco="http://www.isotc211.org/2005/gco"
     xmlns:srv="http://www.isotc211.org/2005/srv"
     xmlns:wei="http://www.weichand.de"
-    exclude-result-prefixes="gmd gco csw srv">
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    exclude-result-prefixes="gmd gco csw srv xs">
         
     <xsl:output method="html" encoding="UTF-8"/>
     
     <xsl:template name="tableRow" >
         <xsl:param name="key"/>
-        <xsl:param name="value"/>
-        <xsl:choose>
-            <xsl:when test="string($value)">
-                <tr>
-                    <td>
-                        <xsl:attribute name="width">
-                            <xsl:value-of select="'20%'"/>                            
-                        </xsl:attribute>                        
-                        <xsl:value-of select="$key"/>
-                    </td>
-                    <td>
-                        <xsl:value-of select="$value"/>
-                    </td>
-                </tr>
-            </xsl:when>
-            <xsl:otherwise></xsl:otherwise>
-        </xsl:choose>
+        <xsl:param name="value" as="xs:string*"></xsl:param>
+        <xsl:for-each select="$value">
+			<xsl:choose>
+				<xsl:when test="string(.)">
+					<tr>
+						<td>
+							<xsl:attribute name="width">
+								<xsl:value-of select="'20%'"/>
+                            </xsl:attribute>
+							<xsl:value-of select="$key"/>
+						</td>
+						<td>
+							<xsl:value-of select="."/>
+						</td>
+					</tr>
+				</xsl:when>
+				<xsl:otherwise></xsl:otherwise>
+			</xsl:choose>
+        </xsl:for-each>
     </xsl:template>
     
     <xsl:template name="tableRowLink" >
@@ -171,7 +174,7 @@
                 <xsl:apply-templates select="//gmd:MD_Metadata" />
                 <p class="copyright">
                     Metadata Viewer - <a href="http://www.weichand.de/">http://www.weichand.de</a> - (c) Juergen Weichand<br />
-                    Version: 2012-10-27
+                    Version: 2020-04-14
                 </p>                                    
             </body>
         </html>
@@ -261,15 +264,15 @@
                         </xsl:call-template>                          
                         <xsl:call-template name="tableRow">
                             <xsl:with-param name="key" select="'Language'"/>
-                            <xsl:with-param name="value" select="gmd:language/*"/>
+                            <xsl:with-param name="value" select="gmd:language//@codeListValue"/>
                         </xsl:call-template>                         
                         <xsl:call-template name="tableRow">
                             <xsl:with-param name="key" select="'Character Set'"/>
-                            <xsl:with-param name="value" select="gmd:characterSet/*"/>
+                            <xsl:with-param name="value" select="gmd:characterSet//@codeListValue"/>
                         </xsl:call-template>                      
                         <xsl:call-template name="tableRow">
                             <xsl:with-param name="key" select="'Hierarchy Level'"/>
-                            <xsl:with-param name="value" select="gmd:hierarchyLevel/*"/>
+                            <xsl:with-param name="value" select="gmd:hierarchyLevel//@codeListValue"/>
                         </xsl:call-template>  
                         <xsl:call-template name="tableRow">
                             <xsl:with-param name="key" select="'Hierarchy Level Name'"/>

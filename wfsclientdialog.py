@@ -196,7 +196,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.startListStoredQueriesRequest(self.url)
 
     def startMetadataRequest(self, url):
-        self.logMessage('Requesting metadata from '.format(url.url()))
+        self.logMessage('Requesting metadata from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
         self.reply.finished.connect(self.MetadataRequestFinished)
 
@@ -214,41 +214,36 @@ class WfsClientDialog(QtWidgets.QDialog):
         xslfilename = os.path.join(plugin_path, "iso19139jw.xsl")
 
         response_content = response.readAll()
-        encoding = 'UTF-8'
+        encoding = 'utf_8'
         length = len(response_content)
         for header in response.rawHeaderPairs():
-            self.logMessage('Testing header: {0}'.format(header[0]))
             if header[0].toLower() == 'content-type':
                 self.logMessage('Found Content-Type header: {0}'.format(header[1]))
                 charset_index = header[1].indexOf('charset=')
                 if charset_index > -1:
-                    encoding = header[1][charset_index + 8:]
+                    encoding = str(header[1][charset_index + 8:], 'ascii')
                     self.logMessage('Got encoding from header: {0}'.format(encoding))
             if header[0].toLower() == 'content-length':
                 self.logMessage('Found Content-Length header: {0}'.format(header[1]))
                 length = int(header[1])
-        self.logMessage('Content-Type: {0}'.format(response.rawHeader('Content-Type')))
 
+        encoding = encoding.lower().translate(encoding.maketrans('-', '_'))
         self.logMessage('Using encoding {0} for metadata'.format(encoding))
         self.logMessage('Using content-length {0} for metadata'.format(length))
 
-        xml_source = str(response_content, encoding)
-
-        print(xml_source)
-
-        # load xslt
-        xslt_file = QtCore.QFile(xslfilename)
-        xslt_file.open(QtCore.QIODevice.ReadOnly)
-        xslt = str(xslt_file.readAll())
-        xslt_file.close()
+        try:
+            xml_source = str(response_content, encoding)
+        except LookupError:
+            self.logMessage('Could not use encoding {0}, trying again with utf_8'.format(encoding), Qgis.Warning)
+            xml_source = str(response_content, 'utf_8')
 
         # xslt
         qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
+        qry.setMessageHandler(MessageHandler())
         qry.setFocus(xml_source)
-        qry.setQuery(xslt)
+        qry.setQuery(QtCore.QUrl('file:///' + xslfilename))
 
         html = qry.evaluateToString()
-        print(html)
 
         if html:
             # create and show the dialog
@@ -994,3 +989,9 @@ class WfsClientDialog(QtWidgets.QDialog):
         elif    geomcode == "3":    return "OGR_GEOMETRY='Polygon' OR OGR_GEOMETRY='MultiPolygon'"
         elif    geomcode == "100":  return "OGR_GEOMETRY='None'"
         else:                       return "OGR_GEOMETRY='Unknown'"
+
+
+class MessageHandler(QtXmlPatterns.QAbstractMessageHandler):
+    def handleMessage(self, msg_type, description, identifier, source_location):
+        if 'QgsMessageLog' in globals():
+            QgsMessageLog.logMessage(str(msg_type) + description, "Wfs20Client", Qgis.Info)
