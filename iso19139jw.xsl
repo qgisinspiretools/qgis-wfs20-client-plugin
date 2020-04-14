@@ -70,9 +70,9 @@
                 <tr>
                     <td>
                         <xsl:attribute name="width">
-                            <xsl:value-of select="'20%'"/>                            
-                        </xsl:attribute>   
-                        <xsl:value-of select="$key"/>                            
+                            <xsl:value-of select="'20%'"/>
+                        </xsl:attribute>
+                        <xsl:value-of select="$key"/>
                     </td>
                     <td>
                         <a>
