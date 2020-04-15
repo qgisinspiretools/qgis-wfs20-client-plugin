@@ -300,7 +300,17 @@ class WfsClientDialog(QtWidgets.QDialog):
         #self.reply.
 
         buf = self.reply.readAll().data()
-        root = ElementTree.fromstring(buf)
+
+        try:
+            root = ElementTree.fromstring(buf)
+        except ElementTree.ParseError as err:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "XML Parsing error",
+                "The capabilities document could not be read:\n{0}".format(err.msg)
+            )
+            return
+
         if self.is_wfs20_capabilties(root):
             # WFS 2.0 Namespace
             nswfs = "{http://www.opengis.net/wfs/2.0}"
@@ -365,7 +375,17 @@ class WfsClientDialog(QtWidgets.QDialog):
             return
 
         buf = self.reply.readAll().data()
-        root = ElementTree.fromstring(buf)
+        try:
+            root = ElementTree.fromstring(buf)
+        except ElementTree.ParseError as err:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "XML Parsing error",
+                "The stored queries list could not be read:\n{0}".format(err.msg)
+            )
+            self.update_ui()
+            return
+
         # WFS 2.0 Namespace
         namespace = "{http://www.opengis.net/wfs/2.0}"
         # check correct Rootelement
@@ -866,8 +886,16 @@ class WfsClientDialog(QtWidgets.QDialog):
 
         # Parse and check only small files
         if os.path.getsize(str(self.outFile.fileName())) < 5000:
-            root = ElementTree.parse(str(self.outFile.fileName())).getroot()
-            if not self.is_exception(root):
+            try:
+                root = ElementTree.parse(str(self.outFile.fileName())).getroot()
+            except ElementTree.ParseError as err:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "XML Parsing error",
+                    "The response could not be read:\n{0}".format(err.msg)
+                )
+
+            if root and not self.is_exception(root):
                 if not self.is_empty_response(root):
                     self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
                 else:
