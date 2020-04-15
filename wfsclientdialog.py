@@ -414,7 +414,11 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     def checkForHTTPErrors(self):
         http_code = self.reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
-        self.logMessage('Received HTTP code {0}'.format(http_code))
+        if http_code is not None:
+            self.logMessage('Request finished with HTTP code {0}'.format(http_code))
+        else:
+            self.logMessage('Request finished with no HTTP code (aborted?)')
+
         if http_code == 401:
             QtWidgets.QMessageBox.critical(
                 self,
