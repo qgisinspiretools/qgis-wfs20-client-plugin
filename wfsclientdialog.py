@@ -847,6 +847,8 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.startRequest(url)
 
     def startRequest(self, url):
+        self.ui.progressBar.setMaximum(100)
+        self.ui.progressBar.setValue(0)
         self.reply = self.qnam.get(QNetworkRequest(url))
         self.reply.finished.connect(self.httpRequestFinished)
         self.reply.readyRead.connect(self.httpReadyRead)
@@ -861,7 +863,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.abort_request()
         self.close()
 
-        self.ui.progressBar.setMaximum(1)
+        self.ui.progressBar.setMaximum(100)
         self.ui.progressBar.setValue(0)
         self.unlock_ui()
 
@@ -881,8 +883,8 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.outFile.flush()
         self.outFile.close()
 
-        self.ui.progressBar.setMaximum(1)
-        self.ui.progressBar.setValue(1)
+        self.ui.progressBar.setMaximum(100)
+        self.ui.progressBar.setValue(100)
 
         # Parse and check only small files
         if os.path.getsize(str(self.outFile.fileName())) < 5000:
@@ -904,8 +906,6 @@ class WfsClientDialog(QtWidgets.QDialog):
         else:
             self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
 
-        self.ui.progressBar.setMaximum(1)
-        self.ui.progressBar.setValue(0)
         self.unlock_ui()
 
     # QHttp Slot
@@ -920,10 +920,11 @@ class WfsClientDialog(QtWidgets.QDialog):
     def updateDataReadProgress(self, bytesRead, totalBytes):
         if self.httpRequestAborted:
             return
-
         self.ui.progressBar.setMaximum(totalBytes)
         self.ui.progressBar.setValue(bytesRead)
-        self.ui.lblMessage.setText("Please wait while downloading - {0} Bytes downloaded!".format(str(bytesRead)))
+        self.ui.lblMessage.setText(
+            "Please wait while downloading - {0}/{1} Bytes downloaded!".format(str(bytesRead), str(totalBytes))
+        )
 
     # QHttp Slot
     def authenticationRequired(self, reply, authenticator):
