@@ -55,6 +55,8 @@ class WfsClientDialog(QtWidgets.QDialog):
 
         self.settings = QtCore.QSettings()
         self.qnam = QNetworkAccessManager()
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
 
         logformat = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         logfile = self.get_temppath("wfs20client.log")
@@ -98,9 +100,9 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.ui.chkExtent.clicked.connect(self.update_extent_frame)
         self.ui.chkAuthentication.clicked.connect(self.update_authentication)
         self.ui.cmbFeatureType.currentIndexChanged.connect(self.update_ui)
-        self.ui.txtUrl.textChanged.connect(self.check_url)
 
-        self.check_url(self.ui.txtUrl.text().strip())
+        self.httpRequestAborted = False
+        self.reply = None
 
         if url:
             self.getCapabilities()
@@ -149,8 +151,6 @@ class WfsClientDialog(QtWidgets.QDialog):
         else:
             request = "{0}{1}".format(self.onlineresource, self.fix_acceptversions(self.onlineresource, "?"))
 
-        self.qnam.authenticationRequired.connect(self.authenticationRequired)
-        self.qnam.sslErrors.connect(self.sslErrors)
         self.reply = None
         self.httpGetId = 0
         self.url = QtCore.QUrl(request)
@@ -187,8 +187,6 @@ class WfsClientDialog(QtWidgets.QDialog):
             request = "{0}?service=WFS&version=2.0.0&request=DescribeStoredQueries".format(self.onlineresource)
         request += self.vendorparameters
 
-        self.qnam.authenticationRequired.connect(self.authenticationRequired)
-        self.qnam.sslErrors.connect(self.sslErrors)
         self.reply = None
         self.httpGetId = 0
         self.url = QtCore.QUrl(request)
@@ -198,15 +196,19 @@ class WfsClientDialog(QtWidgets.QDialog):
     def startMetadataRequest(self, url):
         self.logMessage('Requesting metadata from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.error.connect(self.errorOcurred)
         self.reply.finished.connect(self.MetadataRequestFinished)
 
     def startCapabilitiesRequest(self, url):
+        self.logMessage('Requesting capabilities from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
-        self.reply.finished.connect(self.capabilitiesRequestFinished)
         self.reply.error.connect(self.errorOcurred)
+        self.reply.finished.connect(self.capabilitiesRequestFinished)
 
     def startListStoredQueriesRequest(self, url):
+        self.logMessage('Requesting list of stored queries from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
+        self.reply.error.connect(self.errorOcurred)
         self.reply.finished.connect(self.storedQueriesRequestFinished)
 
     def MetadataRequestFinished(self):
@@ -263,26 +265,36 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     def capabilitiesRequestFinished(self):
 
+        if self.reply is None:
+            # already aborted
+            return
+
         redirectionTarget = self.reply.attribute(QNetworkRequest.RedirectionTargetAttribute)
 
         if redirectionTarget is not None:
             newUrl = self.url.resolved(redirectionTarget)
 
+            self.abort_request()
+
             ret = QtWidgets.QMessageBox.question(
                 self,
-                "HTTP",
-                "Weiterleiten nach: \n\n %s \n \n Passwörter werden dabei ebenfalls weitergeleitet!" % newUrl.toString(),
+                "HTTP Location redirect",
+                "The server wants to redirect your request to\n%s\n\nDo you wish to follow this redirect?\n\n" \
+                "Any authentication details will also be forwarded!" % newUrl.toString(),
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
             )
 
             if ret == QtWidgets.QMessageBox.Yes:
                 self.url = newUrl
-                self.reply.deleteLater()
-                self.reply = None
                 self.startCapabilitiesRequest(self.url)
                 return
 
+            self.update_ui()
+            return
+
         if self.checkForHTTPErrors():
+            self.abort_request()
+            self.update_ui()
             return
 
         #self.reply.
@@ -345,6 +357,10 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     def storedQueriesRequestFinished(self):
 
+        if self.reply is None:
+            # already aborted
+            return
+
         if self.checkForHTTPErrors():
             return
 
@@ -370,13 +386,44 @@ class WfsClientDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, "Error", "Not a valid DescribeStoredQueries-Response!")
         self.update_ui()
 
-    def errorOcurred(self):
-        print("Error Ocurred!")
+    def errorOcurred(self, error_code):
+        if self.reply is None:
+            self.logMessage('HTTP error occurred: {0}'.format(error_code), Qgis.Warning)
+        else:
+            self.logMessage('HTTP error occurred: {0}'.format(self.reply.errorString(), Qgis.Warning))
 
     def checkForHTTPErrors(self):
-        if self.reply.error():
-            QtWidgets.QMessageBox.information(self, "HTTP",
-                                              "Download failed: %s." % self.reply.errorString())
+        http_code = self.reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        self.logMessage('Received HTTP code {0}'.format(http_code))
+        if http_code == 401:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "HTTP 401 Unauthorized",
+                "Authentication is required for this request"
+            )
+            return True
+
+        if http_code == 403:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "HTTP 403 Forbidden",
+                "Your authentication is insufficient for this request"
+            )
+            return True
+
+        if http_code == 404:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "HTTP 404 Not Found",
+                "The specified resource was not found - is the URL correct?"
+            )
+            return True
+
+        error = self.reply.error()
+        if error != QNetworkReply.NoError:
+            if not self.httpRequestAborted:
+                QtWidgets.QMessageBox.critical(self, "HTTP Error",
+                                                  "Request failed: %s." % self.reply.errorString())
             return True
 
     # Process GetFeature-Request
@@ -420,9 +467,6 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.httpGetId = 0
         self.httpRequestAborted = False
 
-        self.qnam.authenticationRequired.connect(self.authenticationRequired)
-        self.qnam.sslErrors.connect(self.sslErrors)
-
         layername="wfs{0}".format(''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6)))
         self.downloadFile(self.onlineresource, query_string, self.get_temppath("{0}.gml".format(layername)))
 
@@ -433,13 +477,6 @@ class WfsClientDialog(QtWidgets.QDialog):
     ############################################################################################################################
     """
 
-
-    # UI: Update SSL-Warning
-    def check_url(self, url):
-        if (url.startswith("https")):
-            self.ui.lblWarning.setVisible(True)
-        else:
-            self.ui.lblWarning.setVisible(False)
 
     # UI: Update Parameter-Frame
     def update_ui(self):
@@ -648,8 +685,6 @@ class WfsClientDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, "Metadata Error", "No metadata URL in FeatureType")
             return
 
-        self.qnam.authenticationRequired.connect(self.authenticationRequired)
-        self.qnam.sslErrors.connect(self.sslErrors)
         url = QtCore.QUrl(url)
         self.startMetadataRequest(url)
 
@@ -803,8 +838,7 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     # Currently unused
     def cancelDownload(self):
-        self.httpRequestAborted = True
-        self.qnam.abort()
+        self.abort_request()
         self.close()
 
         self.ui.progressBar.setMaximum(1)
@@ -853,8 +887,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.critical(self, 'Error',
                                            'Download failed: %s.' % responseHeader.reasonPhrase())
             self.ui.lblMessage.setText("")
-            self.httpRequestAborted = True
-            self.qnam.abort()
+            self.abort_request()
 
     def updateDataReadProgress(self, bytesRead, totalBytes):
         if self.httpRequestAborted:
@@ -866,16 +899,78 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     # QHttp Slot
     def authenticationRequired(self, reply, authenticator):
-        authenticator.setUser(self.ui.txtUsername.text().strip())
-        authenticator.setPassword(self.ui.txtPassword.text().strip())
+        use_authentication = self.ui.chkAuthentication.isChecked()
+        username = self.ui.txtUsername.text().strip()
+        password = self.ui.txtPassword.text().strip()
+        previousUsername = authenticator.user()
+        previousPassword = authenticator.password()
 
-    def sslErrors(self, errors):
+        terminate_request = False
+
+        if not(use_authentication):
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Authentication required",
+                "Authentication is required for this request"
+            )
+            self.ui.chkAuthentication.setChecked(True)
+            self.update_authentication()
+            self.ui.txtUsername.setFocus()
+            terminate_request = True
+
+        if username == '' and not terminate_request:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Authentication required",
+                "Please enter your username for this request"
+            )
+            self.ui.txtUsername.setFocus()
+            terminate_request = True
+
+        if username == previousUsername and password == previousPassword and not terminate_request:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Authentication failed",
+                "Authentication with username/password failed - please check and try again"
+            )
+            self.ui.txtUsername.setFocus()
+            terminate_request = True
+
+        if terminate_request:
+            self.httpRequestAborted = True
+            reply.abort()
+            return
+
+        authenticator.setUser(username)
+        authenticator.setPassword(password)
+        self.logMessage("Using username/password")
+
+    def sslErrors(self, reply, errors):
         errorString = ""
         for error in errors:
-            errorString+=error.errorString() + "\n"
-        # QtWidgets.QMessageBox.critical(self, "Error", errorString)
+            errorString += " * " + error.errorString() + "\n"
 
-        self.qnam.ignoreSslErrors()
+        ret = QtWidgets.QMessageBox.question(
+            self,
+            "Certificate validation error",
+            "The following SSL validation errors have been reported:\n\n%s\n" \
+            "This may indicate a problem with the server and/or its certificate.\n\n" \
+            "Do you wish to continue anyway?" % errorString,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+
+        if ret == QtWidgets.QMessageBox.Yes:
+            self.logMessage("Ignoring SSL errors", Qgis.Warning)
+            reply.ignoreSslErrors()
+        else:
+            self.httpRequestAborted = True
+
+    def abort_request(self):
+        if self.reply is not None:
+            self.httpRequestAborted = True
+            self.reply.abort()
+            self.reply.deleteLater()
+            self.reply = None
 
     def load_vector_layer(self, filename, layername):
 
