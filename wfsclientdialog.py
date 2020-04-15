@@ -372,6 +372,8 @@ class WfsClientDialog(QtWidgets.QDialog):
             return
 
         if self.checkForHTTPErrors():
+            self.abort_request()
+            self.update_ui()
             return
 
         buf = self.reply.readAll().data()
