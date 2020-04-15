@@ -1,1 +1,9 @@
-.idea
+/help/build/
+/.idea/
+/venv/
+/zip_build/
+/resources.py
+/ui_metadataclient.py
+/ui_wfsclient.py
+/ui_wfsclientconfig.py
+

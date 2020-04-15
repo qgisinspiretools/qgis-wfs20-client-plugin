@@ -20,14 +20,15 @@
  ***************************************************************************/
 """
 # Import the PyQt and QGIS libraries
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from qgis.core import *
 # Initialize Qt resources from file resources.py
-import resources
+from .resources import *
 # Import the code for the dialog
-from wfsclientdialog import WfsClientDialog
-from wfsclientconfigdialog import WfsClientConfigDialog
+from .wfsclientdialog import WfsClientDialog
+from .wfsclientconfigdialog import WfsClientConfigDialog
 
 
 class WfsClient:
@@ -41,17 +42,17 @@ class WfsClient:
         self.clientAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "WFS 2.0 Client", self.iface.mainWindow())
         # connect the action to the run method
-        QObject.connect(self.clientAction, SIGNAL("triggered()"), self.runClient)
+        self.clientAction.triggered.connect(self.runClient)
 
         self.configAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "Config", self.iface.mainWindow())
         # connect the action to the run method
-        QObject.connect(self.configAction, SIGNAL("triggered()"), self.runConfig)
+        self.configAction.triggered.connect(self.runConfig)
 
 
         self.aboutAction=QAction(QIcon(":/plugins/wfsclient/icon.png"), \
             "About", self.iface.mainWindow())
-        QObject.connect(self.aboutAction, SIGNAL("activated()"), self.about)
+        self.aboutAction.triggered.connect(self.about)
 
         # Add toolbar button and menu item
         if hasattr( self.iface, "addPluginToWebMenu" ):
@@ -79,7 +80,20 @@ class WfsClient:
             self.iface.removePluginMenu("&WFS 2.0 Client", self.aboutAction)
 
     def about(self):
-        infoString = "<table><tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.7 beta</b></td></tr><tr><td colspan=\"2\"></td></tr><tr><td>Author:</td><td>J&uuml;rgen Weichand</td></tr><tr><td>Mail:</td><td><a href=\"mailto:juergen@weichand.de\">juergen@weichand.de</a></td></tr><tr><td>Website:</td><td><a href=\"http://www.weichand.de\">http://www.weichand.de</a></td></tr></table>"
+        infoString = "<table>" \
+                     "<tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.8 beta</b></td></tr>" \
+                     "<tr><td colspan=\"2\"></td></tr>" \
+                     "<tr><td rowspan=\"3\">Authors:</td>" \
+                     "<td>J&uuml;rgen Weichand " \
+                     "(<a href=\"mailto:juergen@weichand.de\">juergen@weichand.de</a>)</td></tr>" \
+                     "<tr><td>Tim Vinzing</td></tr>" \
+                     "<tr><td>Edward Nash " \
+                     "(<a href=\"mailto:e.nash@dvz-mv.de\">e.nash@dvz-mv.de</a>)</td></tr>" \
+                     "<tr><td colspan=\"2\"></td></tr>" \
+                     "<tr><td>Website:</td>" \
+                     "<td><a href=\"https://github.com/qgisinspiretools/qgis-wfs20-client-plugin\">" \
+                     "https://github.com/qgisinspiretools/qgis-wfs20-client-plugin</a></td></tr>" \
+                     "</table>"
         QMessageBox.information(self.iface.mainWindow(), "About WFS 2.0 Client", infoString)
 
     # run method that performs all the real work

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>WFS 2.0 Client - Version 0.9.7 beta</string>
+   <string>WFS 2.0 Client - Version 0.9.8 beta</string>
   </property>
   <widget class="QLabel" name="lblOnlineResource">
    <property name="geometry">
@@ -490,26 +490,6 @@
     <string>Password</string>
    </property>
   </widget>
-  <widget class="QLabel" name="lblWarning">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>10</y>
-     <width>271</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>8</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Warning: No SSL certificate verification!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </widget>
   <zorder>txtPassword</zorder>
   <zorder>txtUsername</zorder>
   <zorder>lblOnlineResource</zorder>
@@ -518,7 +498,6 @@
   <zorder>frmMain</zorder>
   <zorder>lblUsername</zorder>
   <zorder>lblPassword</zorder>
-  <zorder>lblWarning</zorder>
  </widget>
  <resources/>
  <connections/>
