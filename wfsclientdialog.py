@@ -1039,9 +1039,8 @@ class WfsClientDialog(QtWidgets.QDialog):
             self.logMessage('Set GDAL_HTTP_USERPWD')
 
         # Analyse GML-File
-        ogrdriver = ogr.GetDriverByName("GML")
         self.logger.debug("OGR Datasource: " + filename)
-        ogrdatasource = ogrdriver.Open(filename)
+        ogrdatasource = gdal.OpenEx(filename, allowed_drivers=["GML"])
         self.logger.debug("... loaded")
 
         if ogrdatasource is None:
