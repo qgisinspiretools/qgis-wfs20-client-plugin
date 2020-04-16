@@ -1038,6 +1038,24 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.logger.debug("Using 'NAS_INDICATOR': " + nasdetectionstring)
         gdal.SetConfigOption('NAS_INDICATOR', nasdetectionstring)
 
+        # TODO we should really query all proxy factories and check the exclude list
+        proxy = QgsNetworkAccessManager.instance().fallbackProxy()
+        if proxy.type != QNetworkProxy.NoProxy and proxy.hostName() != "":
+            proxy_string = "{0}:{1}".format(proxy.hostName(), proxy.port())
+            gdal.SetConfigOption('GDAL_HTTP_PROXY', proxy_string)
+            self.logger.debug("Using 'GDAL_HTTP_PROXY': " + proxy_string)
+            self.logMessage('Set GDAL_HTTP_PROXY to ' + proxy_string)
+            if proxy.user() != '':
+                gdal.SetConfigOption('GDAL_HTTP_PROXYUSERPWD', "{0}:{1}".format(proxy.user(), proxy.password()))
+                self.logger.debug("Using 'GDAL_HTTP_PROXYUSERPWD' with username " + proxy.user())
+                self.logMessage('Set GDAL_HTTP_PROXYUSERPWD')
+
+        if self.ui.chkAuthentication.isChecked() and self.ui.txtUsername.text() != '':
+            gdal.SetConfigOption('GDAL_HTTP_USERPWD',
+                                 "{0}:{1}".format(self.ui.txtUsername.text(), self.ui.txtPassword.text()))
+            self.logger.debug("Using 'GDAL_HTTP_USERPWD' with username " + self.ui.txtUsername.text())
+            self.logMessage('Set GDAL_HTTP_USERPWD')
+
         # Analyse GML-File
         ogrdriver = ogr.GetDriverByName("GML")
         self.logger.debug("OGR Datasource: " + filename)
