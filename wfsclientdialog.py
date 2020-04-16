@@ -747,24 +747,6 @@ class WfsClientDialog(QtWidgets.QDialog):
         tmpfile= os.path.join(tmpdir, filename)
         return tmpfile
 
-    # Receive Proxy from QGIS-Settings
-    def getProxy(self):
-
-        excluded_urls = self.settings.value("/proxy/proxyExcludedUrls")
-        if excluded_urls:
-            for excluded_url in excluded_urls:
-                if excluded_url in self.onlineresource:
-                    return ""
-
-        if self.settings.value("/proxy/proxyEnabled") == True:
-            proxy = "{0}:{1}".format(self.settings.value("/proxy/proxyHost"), self.settings.value("/proxy/proxyPort"))
-            if proxy.startswith("http://"):
-                return proxy
-            else:
-                return proxy
-        else:
-            return ""
-
     # check for OWS-Exception
     def is_exception(self, root):
         for namespace in ["{http://www.opengis.net/ows}", "{http://www.opengis.net/ows/1.1}"]:
