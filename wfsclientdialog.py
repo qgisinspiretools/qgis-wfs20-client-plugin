@@ -212,6 +212,9 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.reply.finished.connect(self.storedQueriesRequestFinished)
 
     def MetadataRequestFinished(self):
+        if self.checkForHTTPErrors():
+            return
+
         response = self.reply
         xslfilename = os.path.join(plugin_path, "iso19139jw.xsl")
 
