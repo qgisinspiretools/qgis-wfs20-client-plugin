@@ -1006,7 +1006,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
         if resolvexlinkhref and resolvexlinkhref == "true":
-            gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'NONE')
+            gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'HUGE')
             self.logger.debug("resolveXpathHref " + resolvexlinkhref)
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
