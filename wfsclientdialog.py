@@ -1005,20 +1005,20 @@ class WfsClientDialog(QtWidgets.QDialog):
         gdaltimeout = "5"
         self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
-        if resolvexlinkhref and resolvexlinkhref == "true":
+        if resolvexlinkhref:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'HUGE')
-            self.logger.debug("resolveXpathHref " + resolvexlinkhref)
+            self.logger.debug("resolveXpathHref " + str(resolvexlinkhref))
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
 
-        if attributestofields and attributestofields == "true":
+        if attributestofields:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
-            self.logger.debug("attributesToFields " + attributestofields)
+            self.logger.debug("attributesToFields " + str(attributestofields))
         else:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
         nasdetectionstring = "NAS-Operationen.xsd;NAS-Operationen_optional.xsd;AAA-Fachschema.xsd"
-        if not disablenasdetection or disablenasdetection == "true":
+        if disablenasdetection:
             nasdetectionstring = 'asdf/asdf/asdf'
         self.logger.debug("Using 'NAS_INDICATOR': " + nasdetectionstring)
         gdal.SetConfigOption('NAS_INDICATOR', nasdetectionstring)
