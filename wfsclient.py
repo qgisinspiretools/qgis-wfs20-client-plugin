@@ -81,7 +81,7 @@ class WfsClient:
 
     def about(self):
         infoString = "<table>" \
-                     "<tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.9</b></td></tr>" \
+                     "<tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.10</b></td></tr>" \
                      "<tr><td colspan=\"2\"></td></tr>" \
                      "<tr><td rowspan=\"3\">Authors:</td>" \
                      "<td>J&uuml;rgen Weichand " \
