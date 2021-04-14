@@ -881,19 +881,19 @@ class WfsClientDialog(QtWidgets.QDialog):
         if os.path.getsize(str(self.outFile.fileName())) < 5000:
             try:
                 root = ElementTree.parse(str(self.outFile.fileName())).getroot()
+
+                if root and not self.is_exception(root):
+                    if not self.is_empty_response(root):
+                        self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
+                    else:
+                        QtWidgets.QMessageBox.information(self, "Information", "0 Features returned!")
+                        self.ui.lblMessage.setText("")
             except ElementTree.ParseError as err:
                 QtWidgets.QMessageBox.critical(
                     self,
                     "XML Parsing error",
                     "The response could not be read:\n{0}".format(err.msg)
                 )
-
-            if root and not self.is_exception(root):
-                if not self.is_empty_response(root):
-                    self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
-                else:
-                    QtWidgets.QMessageBox.information(self, "Information", "0 Features returned!")
-                    self.ui.lblMessage.setText("")
         else:
             self.load_vector_layer(str(self.outFile.fileName()), self.ui.cmbFeatureType.currentText())
 
