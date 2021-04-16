@@ -53,7 +53,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.ui = Ui_WfsClient()
         self.ui.setupUi(self)
 
-        self.settings = QtCore.QSettings()
+        self.settings = QgsSettings()
         self.qnam = QNetworkAccessManager()
         self.qnam.authenticationRequired.connect(self.authenticationRequired)
         self.qnam.sslErrors.connect(self.sslErrors)
@@ -1005,20 +1005,20 @@ class WfsClientDialog(QtWidgets.QDialog):
         gdaltimeout = "5"
         self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
-        if resolvexlinkhref:
+        if resolvexlinkhref == "true":
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'HUGE')
             self.logger.debug("resolveXpathHref " + str(resolvexlinkhref))
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
 
-        if attributestofields:
+        if attributestofields == "true":
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
             self.logger.debug("attributesToFields " + str(attributestofields))
         else:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
         nasdetectionstring = "NAS-Operationen.xsd;NAS-Operationen_optional.xsd;AAA-Fachschema.xsd"
-        if disablenasdetection:
+        if disablenasdetection == "true":
             nasdetectionstring = 'asdf/asdf/asdf'
         self.logger.debug("Using 'NAS_INDICATOR': " + nasdetectionstring)
         gdal.SetConfigOption('NAS_INDICATOR', nasdetectionstring)
