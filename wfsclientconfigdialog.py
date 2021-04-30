@@ -33,7 +33,7 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         self.ui = Ui_WfsClientConfig()
         self.ui.setupUi(self)
 
-        self.settings = QtCore.QSettings()
+        self.settings = QgsSettings()
 
         #Restore UI from Settings
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
@@ -46,17 +46,17 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         index = self.ui.cmbResolveDepth.findText(resolvedepth)
         self.ui.cmbResolveDepth.setCurrentIndex(index)
 
-        if resolvexlinkhref:
+        if resolvexlinkhref is True or resolvexlinkhref == "true":
             self.ui.chkResolveXlinkHref.setChecked(True)
         else:
             self.ui.chkResolveXlinkHref.setChecked(False)
 
-        if attributestofields:
+        if attributestofields is True or attributestofields == "true":
             self.ui.chkAttributesToFields.setChecked(True)
         else:
             self.ui.chkAttributesToFields.setChecked(False)
 
-        if disablenasdetection:
+        if disablenasdetection is True or disablenasdetection == "true":
             self.ui.chkDisableNasDetection.setChecked(True)
         else:
             self.ui.chkDisableNasDetection.setChecked(False)
