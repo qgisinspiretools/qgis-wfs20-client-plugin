@@ -46,17 +46,17 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         index = self.ui.cmbResolveDepth.findText(resolvedepth)
         self.ui.cmbResolveDepth.setCurrentIndex(index)
 
-        if resolvexlinkhref == "true":
+        if resolvexlinkhref is True or resolvexlinkhref == "true":
             self.ui.chkResolveXlinkHref.setChecked(True)
         else:
             self.ui.chkResolveXlinkHref.setChecked(False)
 
-        if attributestofields == "true":
+        if attributestofields is True or attributestofields == "true":
             self.ui.chkAttributesToFields.setChecked(True)
         else:
             self.ui.chkAttributesToFields.setChecked(False)
 
-        if disablenasdetection == "true":
+        if disablenasdetection is True or disablenasdetection == "true":
             self.ui.chkDisableNasDetection.setChecked(True)
         else:
             self.ui.chkDisableNasDetection.setChecked(False)
