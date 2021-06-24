@@ -13,4 +13,14 @@ QGIS Plugin for OGC Web Feature Service 2.0.0
 
 * the plugin can be installed using the QGIS Plugin Manager
 * search for `wfs 2.0` and press `Install plugin`
-* the plugin will be available in the `web` menue
+* the plugin will be available in the `web` menu
+
+## Note for *nix-users
+
+* if your get an error message
+  `ImportError: cannot import name 'QtXmlPatterns' from 'PyQt5'`
+  it is necessary to additionally install the QtXmlPatterns library,
+  e.g. for `apt`-based distributions:
+```
+apt install python3-pyqt5.qtxmlpatterns
+```
