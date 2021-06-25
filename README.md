@@ -20,7 +20,13 @@ QGIS Plugin for OGC Web Feature Service 2.0.0
 * if your get an error message
   `ImportError: cannot import name 'QtXmlPatterns' from 'PyQt5'`
   it is necessary to additionally install the QtXmlPatterns library,
-  e.g. for `apt`-based distributions:
+  which since QGIS 3.6 is not automatically installed as a requirement
+  of QGIS itself.
+  * example for `apt`-based distributions:
 ```
 apt install python3-pyqt5.qtxmlpatterns
+```
+  * for MacOS the following command may work:
+```
+brew install python3-pyqt5.qtxmlpatterns
 ```
