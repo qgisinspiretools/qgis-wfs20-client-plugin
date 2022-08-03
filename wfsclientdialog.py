@@ -999,17 +999,19 @@ class WfsClientDialog(QtWidgets.QDialog):
 
         # Configure OGR/GDAL GML-Driver
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
+        gmlskipresolveelems = self.settings.value("/Wfs20Client/gmlSkipResolveElems")
+        if not(resolvexlinkhref is True or resolvexlinkhref == "true"):
+            gmlskipresolveelems = 'ALL'
+        elif not(gmlskipresolveelems == 'NONE' or gmlskipresolveelems == 'HUGE'):
+            gmlskipresolveelems = 'HUGE'
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
         disablenasdetection = self.settings.value("/Wfs20Client/disableNasDetection")
 
         gdaltimeout = "5"
         self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
-        if resolvexlinkhref is True or resolvexlinkhref == "true":
-            gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'HUGE')
-            self.logger.debug("resolveXpathHref " + str(resolvexlinkhref))
-        else:
-            gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
+        self.logger.debug("GML_SKIP_RESOLVE_ELEMS " + gmlskipresolveelems)
+        gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', gmlskipresolveelems)
 
         if attributestofields is True or attributestofields == "true":
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')

@@ -37,6 +37,7 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
 
         #Restore UI from Settings
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
+        gmlskipresolveelems = self.settings.value("/Wfs20Client/gmlSkipResolveElems")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
         disablenasdetection = self.settings.value("/Wfs20Client/disableNasDetection")
         resolvedepth = self.settings.value("/Wfs20Client/resolveDepth")
@@ -46,10 +47,17 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         index = self.ui.cmbResolveDepth.findText(resolvedepth)
         self.ui.cmbResolveDepth.setCurrentIndex(index)
 
+
         if resolvexlinkhref is True or resolvexlinkhref == "true":
             self.ui.chkResolveXlinkHref.setChecked(True)
+            if gmlskipresolveelems is None:
+                gmlskipresolveelems = "HUGE"
         else:
             self.ui.chkResolveXlinkHref.setChecked(False)
+
+        if gmlskipresolveelems == "NONE" or gmlskipresolveelems == "HUGE":
+            index = self.ui.cmbGmlSkipResolveElems.findText(gmlskipresolveelems)
+            self.ui.cmbGmlSkipResolveElems.setCurrentIndex(index)
 
         if attributestofields is True or attributestofields == "true":
             self.ui.chkAttributesToFields.setChecked(True)
@@ -70,12 +78,19 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
             self.ui.txtFeatureLimit.setText(defaultfeaturelimit)
 
         self.ui.cmdSaveConfig.clicked.connect(self.save_config)
+        self.ui.chkResolveXlinkHref.stateChanged.connect(self.manage_resolve_method)
+
+        self.manage_resolve_method(self.ui.chkResolveXlinkHref.isChecked())
 
 
 
     def save_config(self):
         # Save Settings
         self.settings.setValue("/Wfs20Client/resolveXpathHref", self.ui.chkResolveXlinkHref.isChecked())
+        if not self.ui.chkResolveXlinkHref.isChecked():
+            self.settings.setValue("/Wfs20Client/gmlSkipResolveElems", "ALL")
+        else:
+            self.settings.setValue("/Wfs20Client/gmlSkipResolveElems", self.ui.cmbGmlSkipResolveElems.currentText())
         self.settings.setValue("/Wfs20Client/attributesToFields", self.ui.chkAttributesToFields.isChecked())
         self.settings.setValue("/Wfs20Client/disableNasDetection", self.ui.chkDisableNasDetection.isChecked())
         self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText())
@@ -83,3 +98,10 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         self.settings.setValue("/Wfs20Client/defaultFeatureLimit", self.ui.txtFeatureLimit.text().strip())
         QtWidgets.QMessageBox.information(self, "Information", "Configuration saved!")
         self.close()
+
+
+
+    def manage_resolve_method(self, enabled):
+        # enable/disable resolve method combo and associated label
+        self.ui.cmbGmlSkipResolveElems.setEnabled(enabled)
+        self.ui.lblGmlSkipResolveElems.setEnabled(enabled)
