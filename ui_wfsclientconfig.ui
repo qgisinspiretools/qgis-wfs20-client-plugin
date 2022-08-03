@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>541</width>
-    <height>399</height>
+    <height>443</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>370</y>
+     <y>410</y>
      <width>161</width>
      <height>23</height>
     </rect>
@@ -35,7 +35,7 @@
      <x>10</x>
      <y>10</y>
      <width>521</width>
-     <height>131</height>
+     <height>171</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -48,7 +48,7 @@
     <property name="geometry">
      <rect>
       <x>290</x>
-      <y>70</y>
+      <y>110</y>
       <width>21</width>
       <height>20</height>
      </rect>
@@ -67,7 +67,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>70</y>
+      <y>110</y>
       <width>261</width>
       <height>16</height>
      </rect>
@@ -146,7 +146,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>100</y>
+      <y>140</y>
       <width>261</width>
       <height>16</height>
      </rect>
@@ -166,7 +166,7 @@
     <property name="geometry">
      <rect>
       <x>290</x>
-      <y>100</y>
+      <y>140</y>
       <width>21</width>
       <height>20</height>
      </rect>
@@ -184,6 +184,55 @@
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QComboBox" name="cmbGmlSkipResolveElems">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>70</y>
+      <width>91</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="editable">
+     <bool>true</bool>
+    </property>
+    <item>
+     <property name="text">
+      <string>NONE</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>HUGE</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLabel" name="lblGmlSkipResolveElems">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>70</y>
+      <width>261</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>8</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Resolve method (&lt;a href=&quot;https://gdal.org/drivers/vector/gml.html#gml-xlink-resolving&quot;&gt;GML_SKIP_RESOLVE_ELEMS&lt;/a&gt;)</string>
+    </property>
+   </widget>
    <zorder>lblAttributesToFields</zorder>
    <zorder>lblResolveXlinkHref</zorder>
    <zorder>lblGmlHeader</zorder>
@@ -191,12 +240,14 @@
    <zorder>chkResolveXlinkHref</zorder>
    <zorder>lblDisableNasDetection</zorder>
    <zorder>chkDisableNasDetection</zorder>
+   <zorder>cmbGmlSkipResolveElems</zorder>
+   <zorder>lblGmlSkipResolveElems</zorder>
   </widget>
   <widget class="QFrame" name="frmWfs">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>150</y>
+     <y>190</y>
      <width>521</width>
      <height>211</height>
     </rect>
