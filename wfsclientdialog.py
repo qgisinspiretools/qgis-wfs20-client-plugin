@@ -20,9 +20,9 @@
  ***************************************************************************/
 """
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtNetwork import *
-from PyQt5 import QtXml, QtXmlPatterns
+from qgis.PyQt import QtCore, QtGui, QtWidgets
+from qgis.PyQt.QtNetwork import *
+from qgis.PyQt import QtXml, QtXmlPatterns
 from qgis.core import *
 from xml.etree import ElementTree 
 from osgeo import gdal
