@@ -25,7 +25,6 @@ from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
 from qgis.core import *
 # Initialize Qt resources from file resources.py
-from .resources import *
 # Import the code for the dialog
 from .wfsclientdialog import WfsClientDialog
 from .wfsclientconfigdialog import WfsClientConfigDialog
@@ -103,7 +102,7 @@ class WfsClient:
         dlg = WfsClientDialog(self, url)
         # show the dialog
         dlg.show()
-        result = dlg.exec_()
+        result = dlg.exec()
         # See if OK was pressed
         if result == 1:
             # do something useful (delete the line containing pass and

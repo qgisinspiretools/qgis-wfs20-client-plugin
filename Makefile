@@ -23,18 +23,12 @@ PY_FILES = \
 	wfsclientconfigdialog.py \
 	wfsclientdialog.py
 
-UI_FILES = \
-	ui_metadataclient.py  \
-	ui_wfsclientconfig.py  \
-	ui_wfsclient.py
-
 EXTRAS = \
 	icon.png \
 	metadata.txt \
 	iso19139jw.xsl
 
 COMPILED_RESOURCE_FILES = resources.py
-COMPILED_UI_FILES = $(UI_FILES:.ui=.py)
 
 PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
 

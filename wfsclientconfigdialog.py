@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  WfsClientDialog
@@ -20,18 +21,28 @@
  ***************************************************************************/
 """
 
-from qgis.PyQt import QtCore, QtGui, QtWidgets
-from .ui_wfsclientconfig import Ui_WfsClientConfig
+import os
+from qgis.PyQt import QtCore, QtGui, QtWidgets, uic
 from qgis.core import *
+
+UI_WFS_PATH = os.path.join(os.path.dirname(__file__), "ui_wfsclientconfig.ui")
+
+
+class _UiProxy:
+    """Redirects self.ui.<name> to widgets on self so that existing code remains unchanged."""
+    def __init__(self, owner):
+        self._o = owner
+    def __getattr__(self, name):
+        return getattr(self._o, name)
 
 
 class WfsClientConfigDialog(QtWidgets.QDialog):
 
-    def __init__(self, parent):
-        QtWidgets.QDialog.__init__(self)
-        # Set up the user interface from Designer.
-        self.ui = Ui_WfsClientConfig()
-        self.ui.setupUi(self)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        uic.loadUi(UI_WFS_PATH, self)
+        self.ui = _UiProxy(self)
 
         self.settings = QgsSettings()
 
