@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  WfsClient
@@ -19,15 +20,36 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 # Import the PyQt and QGIS libraries
+import os
+
 from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
 from qgis.core import *
-# Initialize Qt resources from file resources.py
+
 # Import the code for the dialog
 from .wfsclientdialog import WfsClientDialog
 from .wfsclientconfigdialog import WfsClientConfigDialog
+
+
+def _icon_path(filename="icon.png"):
+    """Build absolute path to an icon file located next to this module."""
+    return os.path.join(os.path.dirname(__file__), filename)
+
+
+def _icon(filename="icon.png"):
+    """Create a QIcon from a file next to this module."""
+    return QIcon(_icon_path(filename))
+
+
+def _exec_dialog(dlg: QDialog) -> int:
+    """Qt5/Qt6 compatible exec for dialogs."""
+    try:
+        return dlg.exec()     # PyQt6
+    except AttributeError:
+        return dlg.exec_()    # PyQt5
 
 
 class WfsClient:
@@ -35,22 +57,19 @@ class WfsClient:
     def __init__(self, iface):
         # Save reference to the QGIS interface
         self.iface = iface
+        self.clientAction = None
+        self.configAction = None
+        self.aboutAction = None
 
     def initGui(self):
-        # Create action that will start plugin configuration
-        self.clientAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
-            "WFS 2.0 Client", self.iface.mainWindow())
-        # connect the action to the run method
+        # Create actions using a file-based icon (works in Qt5 & Qt6)
+        self.clientAction = QAction(_icon("icon.png"), "WFS 2.0 Client", self.iface.mainWindow())
         self.clientAction.triggered.connect(self.runClient)
 
-        self.configAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
-            "Config", self.iface.mainWindow())
-        # connect the action to the run method
+        self.configAction = QAction(_icon("icon.png"), "Config", self.iface.mainWindow())
         self.configAction.triggered.connect(self.runConfig)
 
-
-        self.aboutAction = QAction(QIcon(":/plugins/wfsclient/icon.png"), \
-            "About", self.iface.mainWindow())
+        self.aboutAction = QAction(_icon("icon.png"), "About", self.iface.mainWindow())
         self.aboutAction.triggered.connect(self.about)
 
         # Add toolbar button and menu item
@@ -97,29 +116,17 @@ class WfsClient:
 
     # run method that performs all the real work
     def runClient(self, url=None):
-
         # create and show the dialog
         dlg = WfsClientDialog(self, url)
-        # show the dialog
         dlg.show()
-        result = dlg.exec()
-        # See if OK was pressed
+        result = _exec_dialog(dlg)
         if result == 1:
-            # do something useful (delete the line containing pass and
-            # substitute with your code
             pass
-
 
     # run method that performs all the real work
     def runConfig(self):
-
-        # create and show the dialog
         dlg = WfsClientConfigDialog(self)
-        # show the dialog
         dlg.show()
-        result = dlg.exec_()
-        # See if OK was pressed
+        result = _exec_dialog(dlg)
         if result == 1:
-            # do something useful (delete the line containing pass and
-            # substitute with your code
             pass
