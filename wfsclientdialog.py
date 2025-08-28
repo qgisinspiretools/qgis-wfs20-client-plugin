@@ -290,7 +290,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             self.logMessage('Could not use encoding {0}, trying again with utf_8'.format(encoding), Qgis.Warning)
             xml_source = str(response_content, 'utf_8')
 
-        # xslt (QtXmlPatterns nur, wenn verfügbar)
+        # xslt (QtXmlPatterns only if available)
         html = None
         if HAS_XMLPATTERNS:
             try:
@@ -303,16 +303,16 @@ class WfsClientDialog(QtWidgets.QDialog):
                 html = None
         else:
             QtWidgets.QMessageBox.warning(
-                self, "XSLT nicht verfügbar",
-                "QtXmlPatterns (XSLT) ist unter Qt6 nicht verfügbar.\n"
-                "Die Metadaten-HTML-Darstellung kann daher nicht erzeugt werden."
+                self, "XSLT not available",
+                "QtXmlPatterns (XSLT) is not available under Qt6.\n"
+                "The metadata HTML representation can therefore not be generated."
             )
 
         if html:
             dlg = MetadataClientDialog()
             dlg.ui.wvMetadata.setHtml(html)
             dlg.show()
-            result = dlg.exec()  # Qt6-kompatibel
+            result = dlg.exec()  # Qt6 compatible
             if result == 1:
                 pass
         else:
