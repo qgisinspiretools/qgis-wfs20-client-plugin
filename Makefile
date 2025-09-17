@@ -199,3 +199,35 @@ pep8:
 	@echo "-----------"
 	@echo "Ignored in PEP8 check:"
 	@echo $(PEP8EXCLUDE)
+
+#################################################
+# pb_tool helpers (expects pb_tool.cfg)
+#################################################
+
+pb_deploy:
+	@echo "------------------------------------"
+	@echo "Building Sphinx HTML help..."
+	@echo "------------------------------------"
+	@cd help && $(MAKE) html
+	@echo
+	@echo "------------------------------------"
+	@echo "Deploying plugin with pb_tool..."
+	@echo "------------------------------------"
+	pb_tool deploy
+
+pb_zip:
+	@echo "------------------------------------"
+	@echo "Building Sphinx HTML help..."
+	@echo "------------------------------------"
+	@cd help && $(MAKE) html
+	@echo
+	@echo "------------------------------------"
+	@echo "Creating plugin ZIP with pb_tool..."
+	@echo "------------------------------------"
+	pb_tool zip
+
+pb_clean:
+	@echo "------------------------------------"
+	@echo "Removing deployed plugin..."
+	@echo "------------------------------------"
+	pb_tool clean
