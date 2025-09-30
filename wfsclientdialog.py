@@ -37,7 +37,6 @@ from qgis.PyQt.QtNetwork import (
     QNetworkRequest,
     QNetworkProxy,
 )
-# QtXmlPatterns ist in Qt6 entfernt – optional laden
 try:
     from qgis.PyQt import QtXmlPatterns
     HAS_XMLPATTERNS = True
@@ -361,9 +360,10 @@ class WfsClientDialog(QtWidgets.QDialog):
                 QtWidgets.QMessageBox.critical(self, "Metadata Error", "Unable to decode metadata response.")
                 return
 
-        # -------- XSLT transformation (QtXmlPatterns only if available) --------
+        # -------- XSLT transformation --------
         html = None
         if HAS_XMLPATTERNS:
+            # Qt5 path (if available): QtXmlPatterns (XSLT 2.0)
             try:
                 qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
                 qry.setMessageHandler(MessageHandler())
@@ -374,11 +374,18 @@ class WfsClientDialog(QtWidgets.QDialog):
                 self.logMessage('XSLT transformation failed: {0}'.format(e), Qgis.Warning)
                 html = None
         else:
-            QtWidgets.QMessageBox.warning(
-                self, "XSLT not available",
-                "QtXmlPatterns (XSLT) is not available under Qt6.\n"
-                "The metadata HTML representation can therefore not be generated."
-            )
+            # Qt6 path: try lxml (XSLT 1.0)
+            try:
+                import lxml.etree as LET
+                # Parse XSLT and XML; ensure UTF-8 input for lxml
+                xslt_doc = LET.parse(xslfilename)
+                transform = LET.XSLT(xslt_doc)
+                xml_doc = LET.fromstring(xml_source.encode('utf-8', errors='ignore'))
+                result_tree = transform(xml_doc)
+                html = str(result_tree)  # HTML string
+            except Exception as e:
+                self.logMessage('lxml XSLT fallback failed: {0}'.format(e), Qgis.Warning)
+                html = None
 
         # -------- Show the result --------
         if html:
@@ -389,7 +396,12 @@ class WfsClientDialog(QtWidgets.QDialog):
             if result == 1:
                 pass
         else:
-            QtWidgets.QMessageBox.critical(self, "Metadata Error", "Unable to read the Metadata")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "XSLT not available",
+                "QtXmlPatterns (XSLT) is not available under Qt6 and lxml fallback failed.\n"
+                "The metadata HTML representation cannot be generated."
+            )
 
     def capabilitiesRequestFinished(self):
 
