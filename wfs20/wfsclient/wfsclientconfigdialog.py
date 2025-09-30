@@ -23,7 +23,7 @@
 
 import os
 from qgis.PyQt import QtCore, QtGui, QtWidgets, uic
-from qgis.core import QgsSettings
+from qgis.core import *
 
 UI_WFS_PATH = os.path.join(os.path.dirname(__file__), "ui_wfsclientconfig.ui")
 
@@ -36,27 +36,17 @@ class _UiProxy:
         return getattr(self._o, name)
 
 
-def _to_bool(val):
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.strip().lower() == "true"
-    return False
-
-
 class WfsClientConfigDialog(QtWidgets.QDialog):
-    def __init__(self, parent: QtWidgets.QWidget | None = None, plugin=None):
+
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.plugin = plugin
 
         uic.loadUi(UI_WFS_PATH, self)
         self.ui = _UiProxy(self)
 
         self.settings = QgsSettings()
 
-        int_validator = QtGui.QIntValidator(1, 1_000_000, self)
-        self.ui.txtFeatureLimit.setValidator(int_validator)
-
+        #Restore UI from Settings
         resolvexlinkhref = self.settings.value("/Wfs20Client/resolveXpathHref")
         attributestofields = self.settings.value("/Wfs20Client/attributesToFields")
         disablenasdetection = self.settings.value("/Wfs20Client/disableNasDetection")
@@ -64,36 +54,43 @@ class WfsClientConfigDialog(QtWidgets.QDialog):
         defaultwfs = self.settings.value("/Wfs20Client/defaultWfs")
         defaultfeaturelimit = self.settings.value("/Wfs20Client/defaultFeatureLimit")
 
-        if resolvedepth is None:
-            resolvedepth = ""
-        idx = self.ui.cmbResolveDepth.findText(str(resolvedepth))
-        self.ui.cmbResolveDepth.setCurrentIndex(idx if idx >= 0 else 0)
+        index = self.ui.cmbResolveDepth.findText(resolvedepth)
+        self.ui.cmbResolveDepth.setCurrentIndex(index)
 
-        self.ui.chkResolveXlinkHref.setChecked(_to_bool(resolvexlinkhref))
-        self.ui.chkAttributesToFields.setChecked(_to_bool(attributestofields))
-        self.ui.chkDisableNasDetection.setChecked(_to_bool(disablenasdetection))
+        if resolvexlinkhref is True or resolvexlinkhref == "true":
+            self.ui.chkResolveXlinkHref.setChecked(True)
+        else:
+            self.ui.chkResolveXlinkHref.setChecked(False)
+
+        if attributestofields is True or attributestofields == "true":
+            self.ui.chkAttributesToFields.setChecked(True)
+        else:
+            self.ui.chkAttributesToFields.setChecked(False)
+
+        if disablenasdetection is True or disablenasdetection == "true":
+            self.ui.chkDisableNasDetection.setChecked(True)
+        else:
+            self.ui.chkDisableNasDetection.setChecked(False)
+
+
 
         if defaultwfs:
-            self.ui.txtUrl.setText(str(defaultwfs))
+            self.ui.txtUrl.setText(defaultwfs)
+
         if defaultfeaturelimit:
-            self.ui.txtFeatureLimit.setText(str(defaultfeaturelimit))
+            self.ui.txtFeatureLimit.setText(defaultfeaturelimit)
 
-        # Signals
         self.ui.cmdSaveConfig.clicked.connect(self.save_config)
-        # self.ui.buttonBox.accepted.connect(self.save_config)
-        # self.ui.buttonBox.rejected.connect(self.reject)
 
-        # self.setWindowModality(QtCore.Qt.WindowModality.NonModal)
-        # self.setWindowTitle("WFS 2.0 Client – Einstellungen")
+
 
     def save_config(self):
         # Save Settings
         self.settings.setValue("/Wfs20Client/resolveXpathHref", self.ui.chkResolveXlinkHref.isChecked())
         self.settings.setValue("/Wfs20Client/attributesToFields", self.ui.chkAttributesToFields.isChecked())
         self.settings.setValue("/Wfs20Client/disableNasDetection", self.ui.chkDisableNasDetection.isChecked())
-        self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText().strip())
+        self.settings.setValue("/Wfs20Client/resolveDepth", self.ui.cmbResolveDepth.currentText())
         self.settings.setValue("/Wfs20Client/defaultWfs", self.ui.txtUrl.text().strip())
         self.settings.setValue("/Wfs20Client/defaultFeatureLimit", self.ui.txtFeatureLimit.text().strip())
-
         QtWidgets.QMessageBox.information(self, "Information", "Configuration saved!")
-        self.accept()  # sauber schließen (statt close), falls via exec() geöffnet
+        self.close()

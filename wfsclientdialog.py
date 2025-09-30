@@ -56,6 +56,52 @@ from .metadataclientdialog import MetadataClientDialog
 plugin_path = os.path.abspath(os.path.dirname(__file__))
 UI_WFS_PATH = os.path.join(os.path.dirname(__file__), "ui_wfsclient.ui")
 
+# ---- Qt5/Qt6 compatibility helper for QIODevice open modes ----
+def _iodev_flag(name: str):
+    # Qt6: QIODevice.OpenModeFlag.NAME
+    try:
+        return getattr(QtCore.QIODevice.OpenModeFlag, name)
+    except Exception:
+        # Qt5: QIODevice.NAME
+        return getattr(QtCore.QIODevice, name)
+
+def _iodev_mode(flag):
+    try:
+        return QtCore.QIODevice.OpenMode(flag)  # Qt6
+    except Exception:
+        return flag  # Qt5
+
+# ---- Qt5/Qt6 compatibility helper for QNetworkProxy types ----
+from qgis.PyQt.QtNetwork import QNetworkProxy
+
+def _nproxy_type(name: str):
+    try:
+        # Qt6
+        return getattr(QNetworkProxy.ProxyType, name)
+    except Exception:
+        # Qt5
+        return getattr(QNetworkProxy, name)
+
+# ---- Qt5/Qt6 compatibility helpers for QNetwork enums ----
+def _nr_attr(name):
+    # QNetworkRequest attribute enum (Qt6) vs flat (Qt5)
+    try:
+        from qgis.PyQt.QtNetwork import QNetworkRequest
+        return getattr(QNetworkRequest.Attribute, name)
+    except Exception:
+        from qgis.PyQt.QtNetwork import QNetworkRequest
+        return getattr(QNetworkRequest, name)
+
+
+def _nrep_err(name):
+    # QNetworkReply.NetworkError (Qt6) vs flat (Qt5)
+    try:
+        from qgis.PyQt.QtNetwork import QNetworkReply
+        return getattr(QNetworkReply.NetworkError, name)
+    except Exception:
+        from qgis.PyQt.QtNetwork import QNetworkReply
+        return getattr(QNetworkReply, name)
+
 
 class _UiProxy:
     """Leitet self.ui.<name> auf Widgets auf self weiter, damit bestehender Code unverändert bleibt."""
@@ -68,23 +114,17 @@ class _UiProxy:
 
 class WfsClientDialog(QtWidgets.QDialog):
 
-    def __init__(self, parent, url):
+
+    def __init__(self, parent: QtWidgets.QWidget | None = None, plugin=None, url=None):
+        # Parent ist ein echtes QWidget (z. B. iface.mainWindow())
+        super().__init__(parent)
+        self.plugin = plugin
+        self.url = url
+
         # UI zur Laufzeit laden (Qt5/Qt6-kompatibel)
-
-
-
-        if isinstance(parent, QtWidgets.QWidget):
-            qt_parent = parent
-        else:
-            qt_parent = parent.iface.mainWindow() if hasattr(parent, "iface") and hasattr(parent.iface, "mainWindow") else None
-
-        super().__init__(qt_parent)
-
         uic.loadUi(UI_WFS_PATH, self)
         self.ui = _UiProxy(self)
 
-        # das Plugin-Objekt für spätere Verwendungen behalten
-        self.parent = parent
         self.settings = QgsSettings()
         self.qnam = QNetworkAccessManager()
         self.qnam.authenticationRequired.connect(self.authenticationRequired)
@@ -121,14 +161,15 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.onlineresource = ""
         self.vendorparameters = ""
 
+        # Canvas/CRS über plugin.iface
         self.ui.lblMessage.setText(
             "SRS is set to EPSG: {0}".format(
-                str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())
+                str(self.plugin.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())
             )
         )
         self.ui.txtSrs.setText(
             "urn:ogc:def:crs:EPSG::{0}".format(
-                str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())
+                str(self.plugin.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())
             )
         )
 
@@ -173,7 +214,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.ui.txtCount.setVisible(True)
         self.ui.lblSrs.setVisible(True)
         self.ui.txtSrs.setText("urn:ogc:def:crs:EPSG::{0}".format(
-            str(self.parent.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())))
+            str(self.plugin.iface.mapCanvas().mapSettings().destinationCrs().postgisSrid())))
         self.ui.txtSrs.setVisible(True)
         self.ui.txtFeatureTypeTitle.setVisible(False)
         self.ui.txtFeatureTypeDescription.setVisible(False)
@@ -235,7 +276,7 @@ class WfsClientDialog(QtWidgets.QDialog):
     def startMetadataRequest(self, url):
         self.logMessage('Requesting metadata from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
-        self._connect_reply_signals(self.reply, self.capabilitiesRequestFinished)
+        self._connect_reply_signals(self.reply, self.MetadataRequestFinished)
 
     def startCapabilitiesRequest(self, url):
         self.logMessage('Requesting capabilities from {0}'.format(url.url()))
@@ -245,7 +286,7 @@ class WfsClientDialog(QtWidgets.QDialog):
     def startListStoredQueriesRequest(self, url):
         self.logMessage('Requesting list of stored queries from {0}'.format(url.url()))
         self.reply = self.qnam.get(QNetworkRequest(url))
-        self._connect_reply_signals(self.reply, self.capabilitiesRequestFinished)
+        self._connect_reply_signals(self.reply, self.storedQueriesRequestFinished)
 
     def _connect_reply_signals(self, reply, finished_slot):
         reply.finished.connect(finished_slot)
@@ -260,37 +301,67 @@ class WfsClientDialog(QtWidgets.QDialog):
                 pass
 
     def MetadataRequestFinished(self):
+        # Check for HTTP/network errors first
         if self.checkForHTTPErrors():
             return
 
         response = self.reply
         xslfilename = os.path.join(plugin_path, "iso19139jw.xsl")
 
+        # Read raw response content (QByteArray)
         response_content = response.readAll()
+
+        # -------- Parse headers (Qt5/Qt6 robust) --------
         encoding = 'utf_8'
         length = len(response_content)
-        for header in response.rawHeaderPairs():
-            if header[0].toLower() == 'content-type':
-                self.logMessage('Found Content-Type header: {0}'.format(header[1]))
-                charset_index = header[1].indexOf('charset=')
-                if charset_index > -1:
-                    encoding = str(header[1][charset_index + 8:], 'ascii')
-                    self.logMessage('Got encoding from header: {0}'.format(encoding))
-            if header[0].toLower() == 'content-length':
-                self.logMessage('Found Content-Length header: {0}'.format(header[1]))
-                length = int(header[1])
+
+        try:
+            header_pairs = response.rawHeaderPairs()
+        except Exception:
+            header_pairs = []
+
+        for name_ba, value_ba in header_pairs:
+            # QByteArray → bytes
+            name_bytes = bytes(name_ba).lower()
+            value_bytes = bytes(value_ba)
+
+            if name_bytes == b'content-type':
+                # Extract charset from Content-Type, e.g. b"text/xml; charset=UTF-8"
+                m = re.search(br'charset=([^\s;]+)', value_bytes, flags=re.I)
+                if m:
+                    try:
+                        encoding = m.group(1).decode('ascii', 'ignore')
+                        self.logMessage('Got encoding from header: {0}'.format(encoding))
+                    except Exception:
+                        pass
+
+            elif name_bytes == b'content-length':
+                try:
+                    length = int(value_bytes.decode('ascii', 'ignore').strip())
+                    self.logMessage('Found Content-Length header: {0}'.format(length))
+                except Exception:
+                    pass
 
         encoding = encoding.lower().translate(encoding.maketrans('-', '_'))
         self.logMessage('Using encoding {0} for metadata'.format(encoding))
         self.logMessage('Using content-length {0} for metadata'.format(length))
 
+        # -------- Decode bytes into text with detected encoding --------
         try:
             xml_source = str(response_content, encoding)
         except LookupError:
             self.logMessage('Could not use encoding {0}, trying again with utf_8'.format(encoding), Qgis.Warning)
             xml_source = str(response_content, 'utf_8')
+        except Exception as e:
+            # Last fallback
+            self.logMessage('Decoding error: {0}. Falling back to utf_8'.format(e), Qgis.Warning)
+            try:
+                xml_source = str(response_content, 'utf_8')
+            except Exception:
+                QtWidgets.QMessageBox.critical(self, "Metadata Error", "Unable to decode metadata response.")
+                return
 
-        # xslt (QtXmlPatterns only if available)
+        # -------- XSLT transformation (QtXmlPatterns only if available) --------
         html = None
         if HAS_XMLPATTERNS:
             try:
@@ -299,7 +370,8 @@ class WfsClientDialog(QtWidgets.QDialog):
                 qry.setFocus(xml_source)
                 qry.setQuery(QtCore.QUrl('file:///' + xslfilename))
                 html = qry.evaluateToString()
-            except Exception:
+            except Exception as e:
+                self.logMessage('XSLT transformation failed: {0}'.format(e), Qgis.Warning)
                 html = None
         else:
             QtWidgets.QMessageBox.warning(
@@ -308,11 +380,12 @@ class WfsClientDialog(QtWidgets.QDialog):
                 "The metadata HTML representation can therefore not be generated."
             )
 
+        # -------- Show the result --------
         if html:
             dlg = MetadataClientDialog()
             dlg.ui.wvMetadata.setHtml(html)
             dlg.show()
-            result = dlg.exec()  # Qt6 compatible
+            result = dlg.exec()  # Qt6-compatible
             if result == 1:
                 pass
         else:
@@ -324,7 +397,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             # already aborted
             return
 
-        redirectionTarget = self.reply.attribute(QNetworkRequest.RedirectionTargetAttribute)
+        redirectionTarget = self.reply.attribute(_nr_attr("RedirectionTargetAttribute"))
 
         if redirectionTarget is not None:
             newUrl = self.url.resolved(redirectionTarget)
@@ -468,7 +541,8 @@ class WfsClientDialog(QtWidgets.QDialog):
             self.logMessage('HTTP error occurred: {0}'.format(self.reply.errorString(), Qgis.Warning))
 
     def checkForHTTPErrors(self):
-        http_code = self.reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+        http_code = self.reply.attribute(_nr_attr("HttpStatusCodeAttribute"))
+
         if http_code is not None:
             self.logMessage('Request finished with HTTP code {0}'.format(http_code))
         else:
@@ -499,7 +573,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             return True
 
         error = self.reply.error()
-        if error != QNetworkReply.NoError:
+        if error != _nrep_err("NoError"):
             if not self.httpRequestAborted:
                 QtWidgets.QMessageBox.critical(self, "HTTP Error",
                                                "Request failed: %s." % self.reply.errorString())
@@ -622,7 +696,7 @@ class WfsClientDialog(QtWidgets.QDialog):
     # UI: Update Extent-Frame
     def update_extent_frame(self):
         if self.ui.chkExtent.isChecked():
-            canvas = self.parent.iface.mapCanvas()
+            canvas = self.plugin.iface.mapCanvas()
             ext = canvas.extent()
             self.ui.txtExtentWest.setText('%s' % ext.xMinimum())
             self.ui.txtExtentEast.setText('%s' % ext.xMaximum())
@@ -752,8 +826,8 @@ class WfsClientDialog(QtWidgets.QDialog):
         layer.dataProvider().addFeatures(features)
         layer.updateExtents()
         layer.reload()
-        self.parent.iface.mapCanvas().refresh()
-        self.parent.iface.zoomToActiveLayer()
+        self.plugin.iface.mapCanvas().refresh()
+        self.plugin.iface.zoomToActiveLayer()
 
     def show_metadata(self):
         featuretype = self.featuretypes[self.ui.cmbFeatureType.currentText()]
@@ -780,7 +854,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         if defaultwfs:
             return defaultwfs
         else:
-            return "http://geoserv.weichand.de:8080/geoserver/wfs"
+            return "https://www.geodaten-mv.de/dienste/inspire_au_atkis_bdlm_download"
 
     def get_featurelimit(self):
         defaultfeaturelimit = self.settings.value("/Wfs20Client/defaultFeatureLimit")
@@ -865,7 +939,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             QtCore.QFile.remove(fileName)
 
         self.outFile = QtCore.QFile(fileName)
-        if not self.outFile.open(QtCore.QIODevice.WriteOnly):
+        if not self.outFile.open(_iodev_mode(_iodev_flag("WriteOnly"))):
             QtWidgets.QMessageBox.information(self, 'Error',
                                               'Unable to save the file %s: %s.' % (fileName, self.outFile.errorString()))
             self.outFile = None
@@ -1041,6 +1115,7 @@ class WfsClientDialog(QtWidgets.QDialog):
             self.reply = None
 
     def load_vector_layer(self, filename, layername):
+        from qgis.PyQt.QtNetwork import QNetworkProxy
 
         self.ui.lblMessage.setText("Loading GML - Please wait!")
         self.logger.debug("### LOADING GML ###")
@@ -1053,39 +1128,49 @@ class WfsClientDialog(QtWidgets.QDialog):
         gdaltimeout = "5"
         self.logger.debug("GDAL_HTTP_TIMEOUT " + gdaltimeout)
         gdal.SetConfigOption("GDAL_HTTP_TIMEOUT", gdaltimeout)
-        if resolvexlinkhref is True or resolvexlinkhref == "true":
+
+        if resolvexlinkhref is True or str(resolvexlinkhref).lower() == "true":
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'HUGE')
             self.logger.debug("resolveXpathHref " + str(resolvexlinkhref))
         else:
             gdal.SetConfigOption('GML_SKIP_RESOLVE_ELEMS', 'ALL')
 
-        if attributestofields is True or attributestofields == "true":
+        if attributestofields is True or str(attributestofields).lower() == "true":
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
             self.logger.debug("attributesToFields " + str(attributestofields))
         else:
             gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'NO')
 
         nasdetectionstring = "NAS-Operationen.xsd;NAS-Operationen_optional.xsd;AAA-Fachschema.xsd"
-        if disablenasdetection is True or disablenasdetection == "true":
+        if disablenasdetection is True or str(disablenasdetection).lower() == "true":
             nasdetectionstring = 'asdf/asdf/asdf'
         self.logger.debug("Using 'NAS_INDICATOR': " + nasdetectionstring)
         gdal.SetConfigOption('NAS_INDICATOR', nasdetectionstring)
 
-        # TODO we should really query all proxy factories and check the exclude list
         proxy = QgsNetworkAccessManager.instance().fallbackProxy()
-        if proxy.type != QNetworkProxy.NoProxy and proxy.hostName() != "":
-            proxy_string = "{0}:{1}".format(proxy.hostName(), proxy.port())
+        try:
+            NO_PROXY = QNetworkProxy.ProxyType.NoProxy  # Qt6
+        except AttributeError:
+            NO_PROXY = QNetworkProxy.NoProxy  # Qt5
+
+        try:
+            ptype = proxy.type()  # Qt6
+        except TypeError:
+            ptype = proxy.type  # Qt5
+
+        if ptype != NO_PROXY and proxy.hostName():
+            proxy_string = f"{proxy.hostName()}:{proxy.port()}"
             gdal.SetConfigOption('GDAL_HTTP_PROXY', proxy_string)
             self.logger.debug("Using 'GDAL_HTTP_PROXY': " + proxy_string)
             self.logMessage('Set GDAL_HTTP_PROXY to ' + proxy_string)
-            if proxy.user() != '':
-                gdal.SetConfigOption('GDAL_HTTP_PROXYUSERPWD', "{0}:{1}".format(proxy.user(), proxy.password()))
+            if proxy.user():
+                gdal.SetConfigOption('GDAL_HTTP_PROXYUSERPWD', f"{proxy.user()}:{proxy.password()}")
                 self.logger.debug("Using 'GDAL_HTTP_PROXYUSERPWD' with username " + proxy.user())
                 self.logMessage('Set GDAL_HTTP_PROXYUSERPWD')
 
-        if self.ui.chkAuthentication.isChecked() and self.ui.txtUsername.text() != '':
+        if self.ui.chkAuthentication.isChecked() and self.ui.txtUsername.text():
             gdal.SetConfigOption('GDAL_HTTP_USERPWD',
-                                 "{0}:{1}".format(self.ui.txtUsername.text(), self.ui.txtPassword.text()))
+                                 f"{self.ui.txtUsername.text()}:{self.ui.txtPassword.text()}")
             self.logger.debug("Using 'GDAL_HTTP_USERPWD' with username " + self.ui.txtUsername.text())
             self.logMessage('Set GDAL_HTTP_USERPWD')
 
@@ -1097,65 +1182,56 @@ class WfsClientDialog(QtWidgets.QDialog):
         if ogrdatasource is None:
             QtWidgets.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
             self.ui.lblMessage.setText("")
+            return
 
-        else:
-            # Determine the LayerCount
-            ogrlayercount = ogrdatasource.GetLayerCount()
-            self.logger.debug("OGR LayerCount: " + str(ogrlayercount))
+        # Determine the LayerCount
+        ogrlayercount = ogrdatasource.GetLayerCount()
+        self.logger.debug("OGR LayerCount: " + str(ogrlayercount))
 
-            hasfeatures = False
+        hasfeatures = False
 
-            # Load every Layer
-            for i in range(0, ogrlayercount):
+        for i in range(0, ogrlayercount):
+            j = ogrlayercount - 1 - i  # Reverse Order?
+            ogrlayer = ogrdatasource.GetLayerByIndex(j)
+            ogrlayername = ogrlayer.GetName()
+            self.logger.debug("OGR LayerName: " + ogrlayername)
 
-                j = ogrlayercount - 1 - i  # Reverse Order?
-                ogrlayer = ogrdatasource.GetLayerByIndex(j)
-                ogrlayername = ogrlayer.GetName()
-                self.logger.debug("OGR LayerName: " + ogrlayername)
+            ogrgeometrytype = ogrlayer.GetGeomType()
+            self.logger.debug("OGR GeometryType: " + ogr.GeometryTypeToName(ogrgeometrytype))
 
-                ogrgeometrytype = ogrlayer.GetGeomType()
-                self.logger.debug("OGR GeometryType: " + ogr.GeometryTypeToName(ogrgeometrytype))
+            if ogrgeometrytype == 0:
+                self.logger.debug("AbstractGeometry-Strategy ...")
+                geomtypeids = ["1", "2", "3", "100"]
+            else:
+                self.logger.debug("DefaultGeometry-Strategy ...")
+                geomtypeids = [str(ogrgeometrytype)]
 
-                geomtypeids = []
+            # Create a Layer for each GeometryType
+            for geomtypeid in geomtypeids:
+                qgislayername = ogrlayername
+                uri = filename + "|layerid=" + str(j)
+                if len(geomtypeids) > 1:
+                    uri += "|subset=" + self.getsubset(geomtypeid)
 
-                # Abstract Geometry
-                if ogrgeometrytype == 0:
-                    self.logger.debug("AbstractGeometry-Strategy ...")
-                    geomtypeids = ["1", "2", "3", "100"]
+                self.logger.debug("Loading QgsVectorLayer: " + uri)
+                vlayer = QgsVectorLayer(uri, qgislayername, "ogr")
+                vlayer.setProviderEncoding("UTF-8")  # Ignore System Encoding --> TODO: Use XML-Header
 
-                # One GeometryType
+                if not vlayer.isValid():
+                    QtWidgets.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
+                    self.ui.lblMessage.setText("")
                 else:
-                    self.logger.debug("DefaultGeometry-Strategy ...")
-                    geomtypeids = [str(ogrgeometrytype)]
+                    featurecount = vlayer.featureCount()
+                    if featurecount > 0:
+                        hasfeatures = True
+                        QgsProject.instance().addMapLayers([vlayer])
+                        self.logger.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
+                        # self.plugin.iface.mapCanvas().zoomToFullExtent()
 
-                # Create a Layer for each GeometryType
-                for geomtypeid in geomtypeids:
+        if hasfeatures is False:
+            QtWidgets.QMessageBox.information(self, "Information", "No Features returned!")
 
-                    qgislayername = ogrlayername  # + "#" + filename
-                    uri = filename + "|layerid=" + str(j)
-
-                    if len(geomtypeids) > 1:
-                        uri += "|subset=" + self.getsubset(geomtypeid)
-
-                    self.logger.debug("Loading QgsVectorLayer: " + uri)
-                    vlayer = QgsVectorLayer(uri, qgislayername, "ogr")
-                    vlayer.setProviderEncoding("UTF-8")  # Ignore System Encoding --> TODO: Use XML-Header
-
-                    if not vlayer.isValid():
-                        QtWidgets.QMessageBox.critical(self, "Error", "Response is not a valid QGIS-Layer!")
-                        self.ui.lblMessage.setText("")
-                    else:
-                        featurecount = vlayer.featureCount()
-                        if featurecount > 0:
-                            hasfeatures = True
-                            QgsProject.instance().addMapLayers([vlayer])
-                            self.logger.debug("... added Layer! QgsFeatureCount: " + str(featurecount))
-                            # self.parent.iface.mapCanvas().zoomToFullExtent()
-
-            if hasfeatures is False:
-                QtWidgets.QMessageBox.information(self, "Information", "No Features returned!")
-
-            self.ui.lblMessage.setText("")
+        self.ui.lblMessage.setText("")
 
     def getsubset(self, geomcode):
 

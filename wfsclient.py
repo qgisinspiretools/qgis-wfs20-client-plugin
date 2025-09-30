@@ -117,16 +117,12 @@ class WfsClient:
     # run method that performs all the real work
     def runClient(self, url=None):
         # create and show the dialog
-        dlg = WfsClientDialog(self, url)
+        dlg = WfsClientDialog(self.iface.mainWindow(), self, url)
         dlg.show()
         result = _exec_dialog(dlg)
         if result == 1:
             pass
 
-    # run method that performs all the real work
     def runConfig(self):
-        dlg = WfsClientConfigDialog(self)
-        dlg.show()
-        result = _exec_dialog(dlg)
-        if result == 1:
-            pass
+        dlg = WfsClientConfigDialog(self.iface.mainWindow(), plugin=self)
+        dlg.exec()

@@ -312,7 +312,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>http://geoserv.weichand.de:8080/geoserver/wfs</string>
+     <string>https://www.geodaten-mv.de/dienste/inspire_au_atkis_bdlm_download</string>
     </property>
    </widget>
    <widget class="QLabel" name="lblDefaultFeatureLimit">
