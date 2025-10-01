@@ -101,12 +101,13 @@ class WfsClient:
         infoString = "<table>" \
                      "<tr><td colspan=\"2\"><b>WFS 2.0 Client 0.9.11</b></td></tr>" \
                      "<tr><td colspan=\"2\"></td></tr>" \
-                     "<tr><td rowspan=\"3\">Authors:</td>" \
+                     "<tr><td rowspan=\"4\">Authors:</td>" \
                      "<td>J&uuml;rgen Weichand " \
                      "(<a href=\"mailto:juergen@weichand.de\">juergen@weichand.de</a>)</td></tr>" \
                      "<tr><td>Tim Vinzing</td></tr>" \
                      "<tr><td>Edward Nash " \
                      "(<a href=\"mailto:e.nash@dvz-mv.de\">e.nash@dvz-mv.de</a>)</td></tr>" \
+                     "<tr><td>Wilhelm Beiche</td></tr>" \
                      "<tr><td colspan=\"2\"></td></tr>" \
                      "<tr><td>Website:</td>" \
                      "<td><a href=\"https://github.com/qgisinspiretools/qgis-wfs20-client-plugin\">" \
