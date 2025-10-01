@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
- MetadataClientDialog
-                                 A QGIS plugin helper dialog
- Displays HTML-rendered metadata (e.g., ISO19139 via XSLT).
+ WfsClientDialog
+                                 A QGIS plugin
+ WFS 2.0 Client
                              -------------------
         begin                : 2012-05-17
-        author               : Your Team
+        copyright            : (C) 2012 by Juergen Weichand
+        email                : juergen@weichand.de
+        website              : http://www.weichand.de
  ***************************************************************************/
 
 /***************************************************************************
