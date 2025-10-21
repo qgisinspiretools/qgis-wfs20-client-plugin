@@ -125,7 +125,9 @@ class WfsClientDialog(QtWidgets.QDialog):
         self.ui = _UiProxy(self)
 
         self.settings = QgsSettings()
-        self.qnam = QNetworkAccessManager()
+        self.qnam = QgsNetworkAccessManager.instance()
+        self.qnam.authenticationRequired.connect(self.authenticationRequired)
+        self.qnam.sslErrors.connect(self.sslErrors)
         self.qnam.authenticationRequired.connect(self.authenticationRequired)
         self.qnam.sslErrors.connect(self.sslErrors)
 
@@ -237,6 +239,16 @@ class WfsClientDialog(QtWidgets.QDialog):
 
         self.startCapabilitiesRequest(self.url)
 
+    def _extract_authcfg(self, qurl: QtCore.QUrl) -> str:
+        q = QtCore.QUrlQuery(qurl)
+        return q.queryItemValue("authcfg").strip()
+
+    def _apply_authcfg(self, request: QNetworkRequest):
+        authcfg = self._extract_authcfg(request.url())
+        if authcfg:
+            QgsAuthManager.instance().updateNetworkRequest(request, authcfg)
+            self.logMessage(f"Applied authcfg={authcfg} to request")
+
     # Process ListStoredQueries-Request
     def listStoredQueries(self):
         self.init_variables()
@@ -274,17 +286,23 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     def startMetadataRequest(self, url):
         self.logMessage('Requesting metadata from {0}'.format(url.url()))
-        self.reply = self.qnam.get(QNetworkRequest(url))
+        req = QNetworkRequest(url)
+        self._apply_authcfg(req)
+        self.reply = self.qnam.get(req)
         self._connect_reply_signals(self.reply, self.MetadataRequestFinished)
 
     def startCapabilitiesRequest(self, url):
         self.logMessage('Requesting capabilities from {0}'.format(url.url()))
-        self.reply = self.qnam.get(QNetworkRequest(url))
+        req = QNetworkRequest(url)
+        self._apply_authcfg(req)
+        self.reply = self.qnam.get(req)
         self._connect_reply_signals(self.reply, self.capabilitiesRequestFinished)
 
     def startListStoredQueriesRequest(self, url):
         self.logMessage('Requesting list of stored queries from {0}'.format(url.url()))
-        self.reply = self.qnam.get(QNetworkRequest(url))
+        req = QNetworkRequest(url)
+        self._apply_authcfg(req)
+        self.reply = self.qnam.get(req)
         self._connect_reply_signals(self.reply, self.storedQueriesRequestFinished)
 
     def _connect_reply_signals(self, reply, finished_slot):
@@ -967,7 +985,9 @@ class WfsClientDialog(QtWidgets.QDialog):
     def startRequest(self, url):
         self.ui.progressBar.setMaximum(100)
         self.ui.progressBar.setValue(0)
-        self.reply = self.qnam.get(QNetworkRequest(url))
+        req = QNetworkRequest(url)
+        self._apply_authcfg(req)
+        self.reply = self.qnam.get(req)
         if hasattr(self.reply, "errorOccurred"):
             self.reply.errorOccurred.connect(self.errorOcurred)
         else:
@@ -1053,6 +1073,11 @@ class WfsClientDialog(QtWidgets.QDialog):
 
     # QHttp Slot
     def authenticationRequired(self, reply, authenticator):
+        if self._extract_authcfg(reply.request().url()):
+            self.logMessage("authcfg in use; skipping basic auth prompt")
+            authenticator.setUser("")
+            authenticator.setPassword("")
+            return
         use_authentication = self.ui.chkAuthentication.isChecked()
         username = self.ui.txtUsername.text().strip()
         password = self.ui.txtPassword.text().strip()
