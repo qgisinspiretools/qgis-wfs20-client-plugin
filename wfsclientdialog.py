@@ -381,6 +381,7 @@ class WfsClientDialog(QtWidgets.QDialog):
         # -------- XSLT transformation --------
         html = None
         if HAS_XMLPATTERNS:
+            transformer_available = True
             # Qt5 path (if available): QtXmlPatterns (XSLT 2.0)
             try:
                 qry = QtXmlPatterns.QXmlQuery(QtXmlPatterns.QXmlQuery.XSLT20)
@@ -395,14 +396,23 @@ class WfsClientDialog(QtWidgets.QDialog):
             # Qt6 path: try lxml (XSLT 1.0)
             try:
                 import lxml.etree as LET
-                # Parse XSLT and XML; ensure UTF-8 input for lxml
-                xslt_doc = LET.parse(xslfilename)
-                transform = LET.XSLT(xslt_doc)
-                xml_doc = LET.fromstring(xml_source.encode('utf-8', errors='ignore'))
-                result_tree = transform(xml_doc)
-                html = str(result_tree)  # HTML string
+                transformer_available = True
             except Exception as e:
-                self.logMessage('lxml XSLT fallback failed: {0}'.format(e), Qgis.Warning)
+                self.logMessage('Required XSLT engine not available (tried: QtXmlPatterns, lxml): {0}'.format(e),
+                                Qgis.Warning)
+                transformer_available = False
+            if transformer_available:
+                try:
+                    # Parse XSLT and XML; ensure UTF-8 input for lxml
+                    xslt_doc = LET.parse(xslfilename)
+                    transform = LET.XSLT(xslt_doc)
+                    xml_doc = LET.fromstring(xml_source.encode('utf-8', errors='ignore'))
+                    result_tree = transform(xml_doc)
+                    html = str(result_tree)  # HTML string
+                except Exception as e:
+                    self.logMessage('lxml XSLT fallback failed: {0}'.format(e), Qgis.Warning)
+                    html = None
+            else:
                 html = None
 
         # -------- Show the result --------
@@ -413,6 +423,13 @@ class WfsClientDialog(QtWidgets.QDialog):
             result = dlg.exec()  # Qt6-compatible
             if result == 1:
                 pass
+        elif transformer_available:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "XSL transform failed",
+                "The transformation of the metadata to HTML failed.\n"
+                "See log for details."
+            )
         else:
             QtWidgets.QMessageBox.critical(
                 self,
